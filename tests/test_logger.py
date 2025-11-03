@@ -1,4 +1,4 @@
-"""
+"""Story MP-003
 Unit tests for centralized logging system
 Run with: pytest tests/test_logger.py
 """
