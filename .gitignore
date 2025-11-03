@@ -57,7 +57,7 @@ logs/
 *.log
 
 # Data & Cache
-data_farm/
+# data_farm/
 *.csv
 *.xlsx
 *.db

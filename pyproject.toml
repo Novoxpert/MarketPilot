@@ -6,6 +6,7 @@ authors = ["Elham Nikbakht Bidgoli <nikbakht.enb4@gmail.com>"]
 readme = "README.md"
 packages = [
     { include = "adapters" },
+    { include = "schemas" },
     { include = "data_farm" },
     { include = "stages" },
 ]

@@ -1,0 +1,13 @@
+# News Data Schema
+type: news
+required_columns:
+  - symbol
+  - startdate
+  - enddate
+  - data
+
+data_types:
+  symbol: string
+  startdate: datetime
+  enddate: datetime
+  data: object
