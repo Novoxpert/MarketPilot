@@ -48,16 +48,16 @@ class ResilientFundamentalAdapter(BaseAdapter):
                 "ratios": {"pe_ratio": 28.5, "debt_to_equity": 5.96, "roe": 0.196},
             }
 
+            # ✅ FIX: Add timestamp field at the data level
             result_data = {
                 "symbol": symbol,
+                "timestamp": datetime.now().isoformat(),  # ✅ Added
                 "startdate": start_date.isoformat(),
                 "enddate": end_date.isoformat(),
                 "data": mock_fundamentals,
             }
 
-            # ✅ Validate against schema BEFORE returning
             self.validate_schema(result_data)
-
             self.log_success(symbol, record_count=1)
 
             return {
@@ -70,7 +70,6 @@ class ResilientFundamentalAdapter(BaseAdapter):
         except Exception as e:
             self.log_error(symbol, str(e))
             return {"success": False, "error": str(e), "vendor": self.vendor}
-
 
 # Example usage
 if __name__ == "__main__":

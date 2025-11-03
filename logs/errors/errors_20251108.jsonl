@@ -3,3 +3,5 @@
 {"timestamp": "2025-11-08T11:02:04.638668", "stage": "pipeline", "block": "run_script", "level": "ERROR", "message": "Smoke test failed: Config file not found: config/data_farm_config.yaml"}
 {"timestamp": "2025-11-08T11:02:13.080930", "stage": "pipeline", "block": "run_script", "level": "ERROR", "message": "Smoke test failed: Config file not found: config/data_farm_config.yaml"}
 {"timestamp": "2025-11-08T11:02:20.726067", "stage": "pipeline", "block": "run_script", "level": "ERROR", "message": "Smoke test failed: Config file not found: config/data_farm_config.yaml"}
+{"timestamp": "2025-11-08T14:27:36.124569", "stage": "health_check", "block": "stage_execution", "level": "ERROR", "message": "Failed health_check: 'dict' object has no attribute 'adapter_id'", "duration_seconds": 0.000615, "error": "'dict' object has no attribute 'adapter_id'"}
+{"timestamp": "2025-11-08T14:34:27.386476", "stage": "health_check", "block": "stage_execution", "level": "ERROR", "message": "Failed health_check: 'dict' object has no attribute 'adapter_id'", "duration_seconds": 0.001003, "error": "'dict' object has no attribute 'adapter_id'"}

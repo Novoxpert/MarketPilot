@@ -13,3 +13,116 @@
 {"timestamp": "2025-11-08T11:09:01.257478", "stage": "smoke_test", "block": "data_farm", "level": "INFO", "message": "Starting smoke test", "symbols": ["AAPL", "NVDA", "TSLA"], "adapter_count": 3}
 {"timestamp": "2025-11-08T11:09:01.280654", "stage": "smoke_test", "block": "data_farm", "level": "INFO", "message": "Smoke test completed", "total": 9, "passed": 9, "failed": 0}
 {"timestamp": "2025-11-08T11:09:01.282654", "stage": "pipeline", "block": "run_script", "level": "INFO", "message": "Smoke test completed successfully", "success": true, "total_tests": 9, "passed": 9, "failed": 0, "details": [{"adapter_id": "price_yfinance_001", "symbol": "AAPL", "status": "\u2705 PASSED"}, {"adapter_id": "price_yfinance_001", "symbol": "NVDA", "status": "\u2705 PASSED"}, {"adapter_id": "price_yfinance_001", "symbol": "TSLA", "status": "\u2705 PASSED"}, {"adapter_id": "news_alphavantage_001", "symbol": "AAPL", "status": "\u2705 PASSED"}, {"adapter_id": "news_alphavantage_001", "symbol": "NVDA", "status": "\u2705 PASSED"}, {"adapter_id": "news_alphavantage_001", "symbol": "TSLA", "status": "\u2705 PASSED"}, {"adapter_id": "fundamental_fmp_001", "symbol": "AAPL", "status": "\u2705 PASSED"}, {"adapter_id": "fundamental_fmp_001", "symbol": "NVDA", "status": "\u2705 PASSED"}, {"adapter_id": "fundamental_fmp_001", "symbol": "TSLA", "status": "\u2705 PASSED"}]}
+{"timestamp": "2025-11-08T14:27:36.205132", "stage": "data_collection", "block": "data_collection", "level": "INFO", "message": "Collected 0 records", "total_records": 0}
+{"timestamp": "2025-11-08T14:27:36.210132", "stage": "nan_processing", "block": "nan_processing", "level": "DEBUG", "message": "NaN replaced in field: close", "symbol": "AAPL", "adapter_id": null}
+{"timestamp": "2025-11-08T14:27:36.210132", "stage": "nan_processing", "block": "nan_processing", "level": "INFO", "message": "Processed 1 NaN values", "nan_count": 1}
+{"timestamp": "2025-11-08T14:27:36.216011", "stage": "deduplication", "block": "deduplication", "level": "DEBUG", "message": "Duplicate removed", "symbol": "AAPL", "adapter_id": "test_1"}
+{"timestamp": "2025-11-08T14:27:36.217019", "stage": "deduplication", "block": "deduplication", "level": "INFO", "message": "Removed 1 duplicates", "duplicates_removed": 1, "unique_records": 1}
+{"timestamp": "2025-11-08T14:34:27.453638", "stage": "data_collection", "block": "data_collection", "level": "INFO", "message": "Collected 0 records", "total_records": 0}
+{"timestamp": "2025-11-08T14:34:27.456638", "stage": "nan_processing", "block": "nan_processing", "level": "DEBUG", "message": "NaN replaced in field: close", "symbol": "AAPL", "adapter_id": null}
+{"timestamp": "2025-11-08T14:34:27.457638", "stage": "nan_processing", "block": "nan_processing", "level": "INFO", "message": "Processed 1 NaN values", "nan_count": 1}
+{"timestamp": "2025-11-08T14:34:27.460639", "stage": "deduplication", "block": "deduplication", "level": "DEBUG", "message": "Duplicate removed", "symbol": "AAPL", "adapter_id": "test_1"}
+{"timestamp": "2025-11-08T14:34:27.460639", "stage": "deduplication", "block": "deduplication", "level": "INFO", "message": "Removed 1 duplicates", "duplicates_removed": 1, "unique_records": 1}
+{"timestamp": "2025-11-08T14:34:39.825398", "stage": "data_collection", "block": "data_collection", "level": "INFO", "message": "Collected 0 records", "total_records": 0}
+{"timestamp": "2025-11-08T14:34:39.829394", "stage": "nan_processing", "block": "nan_processing", "level": "DEBUG", "message": "NaN replaced in field: close", "symbol": "AAPL", "adapter_id": null}
+{"timestamp": "2025-11-08T14:34:39.829394", "stage": "nan_processing", "block": "nan_processing", "level": "INFO", "message": "Processed 1 NaN values", "nan_count": 1}
+{"timestamp": "2025-11-08T14:34:39.832395", "stage": "deduplication", "block": "deduplication", "level": "DEBUG", "message": "Duplicate removed", "symbol": "AAPL", "adapter_id": "test_1"}
+{"timestamp": "2025-11-08T14:34:39.832395", "stage": "deduplication", "block": "deduplication", "level": "INFO", "message": "Removed 1 duplicates", "duplicates_removed": 1, "unique_records": 1}
+{"timestamp": "2025-11-08T14:39:19.175116", "stage": "data_collection", "block": "data_collection", "level": "INFO", "message": "Collected 0 records", "total_records": 0}
+{"timestamp": "2025-11-08T14:39:19.180880", "stage": "nan_processing", "block": "nan_processing", "level": "INFO", "message": "Processed 0 NaN values", "nan_count": 0}
+{"timestamp": "2025-11-08T14:39:19.187633", "stage": "temporal_alignment", "block": "temporal_alignment", "level": "INFO", "message": "Aligned 0 timestamps", "aligned_count": 0}
+{"timestamp": "2025-11-08T14:39:19.193165", "stage": "deduplication", "block": "deduplication", "level": "INFO", "message": "Removed 0 duplicates", "duplicates_removed": 0, "unique_records": 0}
+{"timestamp": "2025-11-08T14:39:19.199622", "stage": "quality_assurance", "block": "quality_assurance", "level": "INFO", "message": "QA complete: 0 passed, 0 failed", "qa_passed": 0, "qa_failed": 0, "pass_rate": "0%"}
+{"timestamp": "2025-11-08T14:39:19.205135", "stage": "data_export", "block": "data_export", "level": "WARNING", "message": "No validated data to export"}
+{"timestamp": "2025-11-08T14:42:16.010052", "stage": "data_collection", "block": "data_collection", "level": "INFO", "message": "Collected 0 records", "total_records": 0}
+{"timestamp": "2025-11-08T14:42:16.013206", "stage": "nan_processing", "block": "nan_processing", "level": "DEBUG", "message": "NaN replaced in field: close", "symbol": "AAPL", "adapter_id": "test_adapter"}
+{"timestamp": "2025-11-08T14:42:16.013206", "stage": "nan_processing", "block": "nan_processing", "level": "INFO", "message": "Processed 1 NaN values", "nan_count": 1}
+{"timestamp": "2025-11-08T14:42:16.017352", "stage": "temporal_alignment", "block": "temporal_alignment", "level": "INFO", "message": "Aligned 1 timestamps", "aligned_count": 1}
+{"timestamp": "2025-11-08T14:42:16.020857", "stage": "deduplication", "block": "deduplication", "level": "DEBUG", "message": "Duplicate removed", "symbol": "AAPL", "adapter_id": "test_1"}
+{"timestamp": "2025-11-08T14:42:16.020857", "stage": "deduplication", "block": "deduplication", "level": "INFO", "message": "Removed 1 duplicates", "duplicates_removed": 1, "unique_records": 1}
+{"timestamp": "2025-11-08T14:42:16.023829", "stage": "quality_assurance", "block": "quality_assurance", "level": "INFO", "message": "QA complete: 1 passed, 0 failed", "qa_passed": 1, "qa_failed": 0, "pass_rate": "100.0%"}
+{"timestamp": "2025-11-08T14:42:16.027346", "stage": "data_export", "block": "data_export", "level": "WARNING", "message": "No validated data to export"}
+{"timestamp": "2025-11-08T16:46:40.024013", "stage": "pipeline", "block": "run_script", "level": "INFO", "message": "Starting complete pipeline execution (MP-007)"}
+{"timestamp": "2025-11-08T16:46:40.024013", "stage": "system", "block": "logger", "level": "INFO", "message": "Logging system initialized", "log_level": "INFO"}
+{"timestamp": "2025-11-08T16:46:40.041252", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Starting complete pipeline execution", "symbols": ["AAPL", "NVDA"], "total_stages": 7}
+{"timestamp": "2025-11-08T16:46:40.042253", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: health_check"}
+{"timestamp": "2025-11-08T16:46:40.044253", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: data_collection"}
+{"timestamp": "2025-11-08T16:46:40.059435", "stage": "data_collection", "block": "data_collection", "level": "INFO", "message": "Collected 6 records", "total_records": 6}
+{"timestamp": "2025-11-08T16:46:40.060434", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: nan_processing"}
+{"timestamp": "2025-11-08T16:46:40.061434", "stage": "nan_processing", "block": "nan_processing", "level": "INFO", "message": "Processed 0 NaN values", "nan_count": 0}
+{"timestamp": "2025-11-08T16:46:40.062434", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: temporal_alignment"}
+{"timestamp": "2025-11-08T16:46:40.063435", "stage": "temporal_alignment", "block": "temporal_alignment", "level": "INFO", "message": "Aligned 2 timestamps", "aligned_count": 2}
+{"timestamp": "2025-11-08T16:46:40.064434", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: deduplication"}
+{"timestamp": "2025-11-08T16:46:40.065434", "stage": "deduplication", "block": "deduplication", "level": "INFO", "message": "Removed 0 duplicates", "duplicates_removed": 0, "unique_records": 6}
+{"timestamp": "2025-11-08T16:46:40.066434", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: quality_assurance"}
+{"timestamp": "2025-11-08T16:46:40.067433", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "AAPL", "issues": ["Missing required field: timestamp"]}
+{"timestamp": "2025-11-08T16:46:40.068434", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "NVDA", "issues": ["Missing required field: timestamp"]}
+{"timestamp": "2025-11-08T16:46:40.068434", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "AAPL", "issues": ["Missing required field: timestamp"]}
+{"timestamp": "2025-11-08T16:46:40.069440", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "NVDA", "issues": ["Missing required field: timestamp"]}
+{"timestamp": "2025-11-08T16:46:40.070433", "stage": "quality_assurance", "block": "quality_assurance", "level": "INFO", "message": "QA complete: 2 passed, 4 failed", "qa_passed": 2, "qa_failed": 4, "pass_rate": "33.3%"}
+{"timestamp": "2025-11-08T16:46:40.071435", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: data_export"}
+{"timestamp": "2025-11-08T16:46:40.074434", "stage": "data_export", "block": "data_export", "level": "INFO", "message": "Data exported successfully", "file": "data\\output\\data_farm_export_20251108_164640.json", "records_exported": 2}
+{"timestamp": "2025-11-08T16:46:40.074434", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Complete pipeline execution finished", "total_duration_seconds": 0.033182, "stages_completed": 7}
+{"timestamp": "2025-11-08T16:46:40.076438", "stage": "pipeline", "block": "run_script", "level": "INFO", "message": "Complete pipeline executed successfully", "duration": 0.033182}
+{"timestamp": "2025-11-08T16:51:35.886822", "stage": "pipeline", "block": "run_script", "level": "INFO", "message": "Starting complete pipeline execution (MP-007)"}
+{"timestamp": "2025-11-08T16:51:35.890268", "stage": "system", "block": "logger", "level": "INFO", "message": "Logging system initialized", "log_level": "INFO"}
+{"timestamp": "2025-11-08T16:51:35.896675", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Starting complete pipeline execution", "symbols": ["AAPL", "NVDA"], "total_stages": 7}
+{"timestamp": "2025-11-08T16:51:35.896675", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: health_check"}
+{"timestamp": "2025-11-08T16:51:35.899299", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: data_collection"}
+{"timestamp": "2025-11-08T16:51:35.912644", "stage": "data_collection", "block": "data_collection", "level": "INFO", "message": "Collected 6 records", "total_records": 6}
+{"timestamp": "2025-11-08T16:51:35.913645", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: nan_processing"}
+{"timestamp": "2025-11-08T16:51:35.914646", "stage": "nan_processing", "block": "nan_processing", "level": "INFO", "message": "Processed 0 NaN values", "nan_count": 0}
+{"timestamp": "2025-11-08T16:51:35.916257", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: temporal_alignment"}
+{"timestamp": "2025-11-08T16:51:35.916925", "stage": "temporal_alignment", "block": "temporal_alignment", "level": "INFO", "message": "Aligned 2 timestamps", "aligned_count": 2}
+{"timestamp": "2025-11-08T16:51:35.916925", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: deduplication"}
+{"timestamp": "2025-11-08T16:51:35.916925", "stage": "deduplication", "block": "deduplication", "level": "INFO", "message": "Removed 0 duplicates", "duplicates_removed": 0, "unique_records": 6}
+{"timestamp": "2025-11-08T16:51:35.916925", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: quality_assurance"}
+{"timestamp": "2025-11-08T16:51:35.916925", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "AAPL", "adapter_id": "news_alphavantage_001", "issues": ["Missing timestamp field"]}
+{"timestamp": "2025-11-08T16:51:35.916925", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "NVDA", "adapter_id": "news_alphavantage_001", "issues": ["Missing timestamp field"]}
+{"timestamp": "2025-11-08T16:51:35.916925", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "AAPL", "adapter_id": "fundamental_fmp_001", "issues": ["Missing timestamp field"]}
+{"timestamp": "2025-11-08T16:51:35.916925", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "NVDA", "adapter_id": "fundamental_fmp_001", "issues": ["Missing timestamp field"]}
+{"timestamp": "2025-11-08T16:51:35.916925", "stage": "quality_assurance", "block": "quality_assurance", "level": "INFO", "message": "QA complete: 2 passed, 4 failed", "qa_passed": 2, "qa_failed": 4, "pass_rate": "33.3%", "total_records": 6}
+{"timestamp": "2025-11-08T16:51:35.928064", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: data_export"}
+{"timestamp": "2025-11-08T16:51:35.930071", "stage": "data_export", "block": "data_export", "level": "INFO", "message": "Data exported successfully", "file": "data\\output\\data_farm_export_20251108_165135.json", "records_exported": 2}
+{"timestamp": "2025-11-08T16:51:35.931071", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Complete pipeline execution finished", "total_duration_seconds": 0.034396, "stages_completed": 7}
+{"timestamp": "2025-11-08T16:51:35.931786", "stage": "pipeline", "block": "run_script", "level": "INFO", "message": "Complete pipeline executed successfully", "duration": 0.034396}
+{"timestamp": "2025-11-08T16:51:42.277336", "stage": "pipeline", "block": "run_script", "level": "INFO", "message": "Starting complete pipeline execution (MP-007)"}
+{"timestamp": "2025-11-08T16:51:42.277336", "stage": "system", "block": "logger", "level": "INFO", "message": "Logging system initialized", "log_level": "INFO"}
+{"timestamp": "2025-11-08T16:51:42.292798", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Starting complete pipeline execution", "symbols": ["AAPL", "NVDA"], "total_stages": 7}
+{"timestamp": "2025-11-08T16:51:42.292798", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: health_check"}
+{"timestamp": "2025-11-08T16:51:42.295163", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: data_collection"}
+{"timestamp": "2025-11-08T16:51:42.312610", "stage": "data_collection", "block": "data_collection", "level": "INFO", "message": "Collected 6 records", "total_records": 6}
+{"timestamp": "2025-11-08T16:51:42.313616", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: nan_processing"}
+{"timestamp": "2025-11-08T16:51:42.314616", "stage": "nan_processing", "block": "nan_processing", "level": "INFO", "message": "Processed 0 NaN values", "nan_count": 0}
+{"timestamp": "2025-11-08T16:51:42.316617", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: temporal_alignment"}
+{"timestamp": "2025-11-08T16:51:42.317617", "stage": "temporal_alignment", "block": "temporal_alignment", "level": "INFO", "message": "Aligned 2 timestamps", "aligned_count": 2}
+{"timestamp": "2025-11-08T16:51:42.319650", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: deduplication"}
+{"timestamp": "2025-11-08T16:51:42.320158", "stage": "deduplication", "block": "deduplication", "level": "INFO", "message": "Removed 0 duplicates", "duplicates_removed": 0, "unique_records": 6}
+{"timestamp": "2025-11-08T16:51:42.322174", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: quality_assurance"}
+{"timestamp": "2025-11-08T16:51:42.322174", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "AAPL", "adapter_id": "news_alphavantage_001", "issues": ["Missing timestamp field"]}
+{"timestamp": "2025-11-08T16:51:42.322174", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "NVDA", "adapter_id": "news_alphavantage_001", "issues": ["Missing timestamp field"]}
+{"timestamp": "2025-11-08T16:51:42.322174", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "AAPL", "adapter_id": "fundamental_fmp_001", "issues": ["Missing timestamp field"]}
+{"timestamp": "2025-11-08T16:51:42.322174", "stage": "quality_assurance", "block": "quality_assurance", "level": "WARNING", "message": "QA issues found", "symbol": "NVDA", "adapter_id": "fundamental_fmp_001", "issues": ["Missing timestamp field"]}
+{"timestamp": "2025-11-08T16:51:42.322174", "stage": "quality_assurance", "block": "quality_assurance", "level": "INFO", "message": "QA complete: 2 passed, 4 failed", "qa_passed": 2, "qa_failed": 4, "pass_rate": "33.3%", "total_records": 6}
+{"timestamp": "2025-11-08T16:51:42.322174", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: data_export"}
+{"timestamp": "2025-11-08T16:51:42.329227", "stage": "data_export", "block": "data_export", "level": "INFO", "message": "Data exported successfully", "file": "data\\output\\data_farm_export_20251108_165142.json", "records_exported": 2}
+{"timestamp": "2025-11-08T16:51:42.330228", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Complete pipeline execution finished", "total_duration_seconds": 0.03843, "stages_completed": 7}
+{"timestamp": "2025-11-08T16:51:42.332226", "stage": "pipeline", "block": "run_script", "level": "INFO", "message": "Complete pipeline executed successfully", "duration": 0.03843}
+{"timestamp": "2025-11-08T17:01:06.120513", "stage": "pipeline", "block": "run_script", "level": "INFO", "message": "Starting complete pipeline execution (MP-007)"}
+{"timestamp": "2025-11-08T17:01:06.120513", "stage": "system", "block": "logger", "level": "INFO", "message": "Logging system initialized", "log_level": "INFO"}
+{"timestamp": "2025-11-08T17:01:06.135148", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Starting complete pipeline execution", "symbols": ["AAPL", "NVDA"], "total_stages": 7}
+{"timestamp": "2025-11-08T17:01:06.135528", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: health_check"}
+{"timestamp": "2025-11-08T17:01:06.137444", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: data_collection"}
+{"timestamp": "2025-11-08T17:01:06.148976", "stage": "data_collection", "block": "data_collection", "level": "INFO", "message": "Collected 6 records", "total_records": 6}
+{"timestamp": "2025-11-08T17:01:06.153288", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: nan_processing"}
+{"timestamp": "2025-11-08T17:01:06.154000", "stage": "nan_processing", "block": "nan_processing", "level": "INFO", "message": "Processed 0 NaN values", "nan_count": 0}
+{"timestamp": "2025-11-08T17:01:06.154999", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: temporal_alignment"}
+{"timestamp": "2025-11-08T17:01:06.155999", "stage": "temporal_alignment", "block": "temporal_alignment", "level": "INFO", "message": "Aligned 6 timestamps", "aligned_count": 6}
+{"timestamp": "2025-11-08T17:01:06.157001", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: deduplication"}
+{"timestamp": "2025-11-08T17:01:06.158000", "stage": "deduplication", "block": "deduplication", "level": "INFO", "message": "Removed 0 duplicates", "duplicates_removed": 0, "unique_records": 6}
+{"timestamp": "2025-11-08T17:01:06.158000", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: quality_assurance"}
+{"timestamp": "2025-11-08T17:01:06.158000", "stage": "quality_assurance", "block": "quality_assurance", "level": "INFO", "message": "QA complete: 6 passed, 0 failed", "qa_passed": 6, "qa_failed": 0, "pass_rate": "100.0%", "total_records": 6}
+{"timestamp": "2025-11-08T17:01:06.158000", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Executing stage: data_export"}
+{"timestamp": "2025-11-08T17:01:06.158000", "stage": "data_export", "block": "data_export", "level": "INFO", "message": "Data exported successfully", "file": "data\\output\\data_farm_export_20251108_170106.json", "records_exported": 6}
+{"timestamp": "2025-11-08T17:01:06.158000", "stage": "pipeline", "block": "execution", "level": "INFO", "message": "Complete pipeline execution finished", "total_duration_seconds": 0.022852, "stages_completed": 7}
+{"timestamp": "2025-11-08T17:01:06.166772", "stage": "pipeline", "block": "run_script", "level": "INFO", "message": "Complete pipeline executed successfully", "duration": 0.022852}

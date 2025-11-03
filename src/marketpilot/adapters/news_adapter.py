@@ -28,7 +28,7 @@ class ResilientNewsAdapter(BaseAdapter):
             end_date = datetime.now()
             start_date = end_date - timedelta(days=1)
 
-            # Mock news data
+            # Mock news data with timestamp field
             mock_news = [
                 {
                     "title": f"{symbol} Stock Analysis",
@@ -44,8 +44,10 @@ class ResilientNewsAdapter(BaseAdapter):
                 },
             ]
 
+            # ✅ FIX: Add timestamp field at the data level
             result_data = {
                 "symbol": symbol,
+                "timestamp": datetime.now().isoformat(),  # ✅ Added
                 "startdate": start_date.isoformat(),
                 "enddate": end_date.isoformat(),
                 "data": mock_news,

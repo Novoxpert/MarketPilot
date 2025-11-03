@@ -1,16 +1,27 @@
 """
 ResilientDataFarm - Main orchestrator for all adapters
 Entry point for Market Pilot data ingestion system
+Updated with full pipeline integration (MP-007)
 """
 
 from typing import Dict, Any, List
 from pathlib import Path
+from datetime import datetime
 from marketpilot.config.config_loader import load_config
 from marketpilot.utils.logger import log_event, setup_logging
 from marketpilot.adapters.base_adapter import BaseAdapter
 from marketpilot.adapters.price_adapter import ResilientPriceAdapter
 from marketpilot.adapters.news_adapter import ResilientNewsAdapter
 from marketpilot.adapters.fundamental_adapter import ResilientFundamentalAdapter
+
+# Import all pipeline stages
+from marketpilot.data_farm.stages.health_check import HealthCheckStage
+from marketpilot.data_farm.stages.data_collection import DataCollectionStage
+from marketpilot.data_farm.stages.nan_processing import NaNProcessingStage
+from marketpilot.data_farm.stages.temporal_alignment import TemporalAlignmentStage
+from marketpilot.data_farm.stages.deduplication import DeduplicationStage
+from marketpilot.data_farm.stages.quality_assurance import QualityAssuranceStage
+from marketpilot.data_farm.stages.data_export import DataExportStage
 
 
 class ResilientDataFarm:
@@ -35,6 +46,17 @@ class ResilientDataFarm:
         self.config = load_config(config_path)
         self.adapters: List[BaseAdapter] = []
 
+        # Initialize pipeline stages
+        self.stages = [
+            HealthCheckStage(),
+            DataCollectionStage(),
+            NaNProcessingStage(),
+            TemporalAlignmentStage(),
+            DeduplicationStage(),
+            QualityAssuranceStage(),
+            DataExportStage(),
+        ]
+
         # Initialize components
         self._initialize_components()
         self._initialize_adapters()
@@ -46,6 +68,7 @@ class ResilientDataFarm:
             msg="ResilientDataFarm initialization complete",
             extra={
                 "adapters_loaded": len(self.adapters),
+                "stages_loaded": len(self.stages),
                 "config_loaded": bool(self.config),
             },
         )
@@ -154,6 +177,99 @@ class ResilientDataFarm:
             msg="Adapter initialization complete",
             extra={"total_adapters": len(self.adapters)},
         )
+
+    async def _execute_complete_pipeline(self, symbols: List[str]) -> Dict[str, Any]:
+        """
+        Execute complete end-to-end pipeline with all stages
+
+        Args:
+            symbols: List of symbols to process
+
+        Returns:
+            Complete pipeline results
+        """
+        pipeline_start = datetime.now()
+
+        log_event(
+            stage="pipeline",
+            block="execution",
+            level="INFO",
+            msg="Starting complete pipeline execution",
+            extra={
+                "symbols": symbols,
+                "total_stages": len(self.stages),
+            },
+        )
+
+        # Initialize pipeline data
+        pipeline_data = {
+            "pipeline_start": pipeline_start.isoformat(),
+            "adapters": self.adapters,
+            "symbols": symbols,
+            "config": self.config,
+        }
+
+        try:
+            # Execute each stage sequentially
+            for stage in self.stages:
+                log_event(
+                    stage="pipeline",
+                    block="execution",
+                    level="INFO",
+                    msg=f"Executing stage: {stage.stage_name}",
+                )
+
+                # Execute stage
+                pipeline_data = await stage.execute(pipeline_data)
+
+            # Pipeline complete
+            pipeline_end = datetime.now()
+            pipeline_duration = (pipeline_end - pipeline_start).total_seconds()
+
+            log_event(
+                stage="pipeline",
+                block="execution",
+                level="INFO",
+                msg="Complete pipeline execution finished",
+                extra={
+                    "total_duration_seconds": pipeline_duration,
+                    "stages_completed": len(self.stages),
+                },
+            )
+
+            pipeline_data["pipeline_end"] = pipeline_end.isoformat()
+            pipeline_data["pipeline_duration"] = pipeline_duration
+
+            return pipeline_data
+
+        except Exception as e:
+            pipeline_end = datetime.now()
+            pipeline_duration = (pipeline_end - pipeline_start).total_seconds()
+
+            log_event(
+                stage="pipeline",
+                block="execution",
+                level="ERROR",
+                msg=f"Pipeline execution failed: {str(e)}",
+                extra={
+                    "duration_seconds": pipeline_duration,
+                    "error": str(e),
+                },
+            )
+
+            raise
+
+    async def run_complete_pipeline(self, symbols: List[str]) -> Dict[str, Any]:
+        """
+        Public method to run complete end-to-end pipeline
+
+        Args:
+            symbols: List of symbols to process
+
+        Returns:
+            Pipeline results
+        """
+        return await self._execute_complete_pipeline(symbols)
 
     async def run_smoke_test(self, symbols: List[str]) -> Dict[str, Any]:
         """
