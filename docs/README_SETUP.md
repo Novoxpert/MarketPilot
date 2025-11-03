@@ -120,7 +120,51 @@ poetry run pytest && poetry run black --check . && poetry run flake8 .
 ```
 
 ---
+# Log Verification Guide
 
+## View Log Files
+
+### PowerShell
+```powershell
+Get-Content logs\adapters\adapters_*.jsonl
+Get-Content logs\stages\stages_*.jsonl
+Get-Content logs\errors\errors_*.jsonl
+Get-Content logs\pipeline\pipeline_*.jsonl
+```
+
+### Linux/macOS
+```bash
+cat logs/adapters/adapters_*.jsonl
+cat logs/stages/stages_*.jsonl
+cat logs/errors/errors_*.jsonl
+cat logs/pipeline/pipeline_*.jsonl
+```
+
+## Pretty Print (Optional)
+
+With `jq`:
+```bash
+cat logs/adapters/adapters_*.jsonl | jq .
+```
+
+With Python:
+```bash
+poetry run python -c "import json; [print(json.dumps(json.loads(line), indent=2)) for line in open('logs/adapters/adapters_20250103.jsonl')]"
+```
+
+## Expected Output
+
+Each log line should be valid JSON with these fields:
+```json
+{"timestamp": "2025-01-03T14:30:00", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Fetched data", "symbol": "AAPL"}
+```
+
+## Verification Checklist
+
+- [ ] All directories exist: `adapters/`, `stages/`, `errors/`, `pipeline/`
+- [ ] Files named with date: `category_YYYYMMDD.jsonl`
+- [ ] Each line is valid JSON
+- [ ] Logs routed to correct directories
 ## Need Help?
 
 - Check troubleshooting section above
