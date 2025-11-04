@@ -4,8 +4,6 @@ Resilient Price Adapter using YFinance
 
 from typing import Dict, Any
 from datetime import datetime
-
-# , timedelta
 from adapters.base_adapter import BaseAdapter
 
 
@@ -40,6 +38,9 @@ class ResilientPriceAdapter(BaseAdapter):
                 "volume": 1000000,
                 "adjusted_close": 152.0,
             }
+
+            # ✅ Validate against schema BEFORE returning
+            self.validate_schema(mock_data)
 
             self.log_success(symbol, record_count=1)
 
