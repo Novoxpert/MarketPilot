@@ -1,0 +1,30 @@
+# Data Farm Configuration
+# Main configuration for Market Pilot data ingestion pipeline
+
+logging:
+  level: INFO
+
+output:
+  base_dir: data/output
+
+adapters:
+  # Price Data Adapter
+  - id: price_yfinance_001
+    type: price
+    vendor: yfinance
+    cadence: 1min
+    schema_type: price
+
+  # News Data Adapter
+  - id: news_alphavantage_001
+    type: news
+    vendor: alphavantage
+    cadence: 15min
+    schema_type: news
+
+  # Fundamental Data Adapter
+  - id: fundamental_fmp_001
+    type: fundamental
+    vendor: fmp
+    cadence: daily
+    schema_type: fundamental
