@@ -155,6 +155,100 @@ class ResilientDataFarm:
             extra={"total_adapters": len(self.adapters)},
         )
 
+    async def run_smoke_test(self, symbols: List[str]) -> Dict[str, Any]:
+        """
+        Run smoke test across all adapters for given symbols
+
+        Args:
+            symbols: List of asset symbols to test (e.g., ['AAPL', 'NVDA', 'TSLA'])
+
+        Returns:
+            Dictionary with test results
+        """
+        log_event(
+            stage="smoke_test",
+            block="data_farm",
+            level="INFO",
+            msg="Starting smoke test",
+            extra={"symbols": symbols, "adapter_count": len(self.adapters)},
+        )
+
+        results = {
+            "success": True,
+            "total_tests": 0,
+            "passed": 0,
+            "failed": 0,
+            "details": [],
+        }
+
+        # Run each adapter for each symbol
+        for adapter in self.adapters:
+            for symbol in symbols:
+                results["total_tests"] += 1
+
+                try:
+                    # Execute adapter ingestion
+                    result = await adapter.execute_ingest(symbol)
+
+                    if result.get("success"):
+                        results["passed"] += 1
+                        results["details"].append(
+                            {
+                                "adapter_id": adapter.adapter_id,
+                                "symbol": symbol,
+                                "status": "✅ PASSED",
+                            }
+                        )
+                    else:
+                        results["failed"] += 1
+                        results["details"].append(
+                            {
+                                "adapter_id": adapter.adapter_id,
+                                "symbol": symbol,
+                                "status": "❌ FAILED",
+                                "error": result.get("error", "Unknown"),
+                            }
+                        )
+
+                except Exception as e:
+                    results["failed"] += 1
+                    results["success"] = False
+                    results["details"].append(
+                        {
+                            "adapter_id": adapter.adapter_id,
+                            "symbol": symbol,
+                            "status": "❌ EXCEPTION",
+                            "error": str(e),
+                        }
+                    )
+
+                    log_event(
+                        stage="smoke_test",
+                        block="data_farm",
+                        level="ERROR",
+                        msg="Exception during smoke test",
+                        extra={
+                            "adapter_id": adapter.adapter_id,
+                            "symbol": symbol,
+                            "error": str(e),
+                        },
+                    )
+
+        # Final summary
+        log_event(
+            stage="smoke_test",
+            block="data_farm",
+            level="INFO" if results["failed"] == 0 else "WARNING",
+            msg="Smoke test completed",
+            extra={
+                "total": results["total_tests"],
+                "passed": results["passed"],
+                "failed": results["failed"],
+            },
+        )
+
+        return results
+
     def get_adapters(self) -> List[BaseAdapter]:
         """Get list of all loaded adapters"""
         return self.adapters
