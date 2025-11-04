@@ -34,10 +34,16 @@ def _create_log_dirs():
         dir_path.mkdir(parents=True, exist_ok=True)
 
 
-def _get_log_file(category: str) -> Path:
-    """Get log file path for a category with timestamp"""
-    timestamp = datetime.now().strftime("%Y%m%d")
+def _get_log_file(category: str, stage: str = "") -> Path:
+    """Get log file path for a category"""
     log_dir = LOG_DIRS.get(category, LOG_DIRS["pipeline"])
+
+    # For initialization stage in pipeline, use 'current.jsonl' (MP-005 requirement)
+    if category == "pipeline" and stage == "initialization":
+        return log_dir / "current.jsonl"
+
+    # For all other logs, use timestamped files
+    timestamp = datetime.now().strftime("%Y%m%d")
     return log_dir / f"{category}_{timestamp}.jsonl"
 
 
@@ -63,9 +69,10 @@ def log_event(
     """
     # Create directories if needed
     _create_log_dirs()
-
-    # Determine log category based on block name
-    if level in ["ERROR", "CRITICAL"]:
+    if stage == "initialization":
+        category = "pipeline"
+    # THEN: Check other conditions
+    elif level in ["ERROR", "CRITICAL"]:
         category = "errors"
     elif "adapter" in block.lower():
         category = "adapters"
@@ -92,7 +99,7 @@ def log_event(
         log_entry.update(extra)
 
     # Write to JSONL file
-    log_file = _get_log_file(category)
+    log_file = _get_log_file(category, stage)  # Pass stage here
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
 
@@ -128,50 +135,3 @@ def setup_logging(log_level: str = "INFO"):
 if __name__ == "__main__":
     # Initialize logging
     setup_logging("DEBUG")
-
-    # Test adapter logs
-    log_event(
-        stage="ingestion",
-        block="alphavantage_adapter",
-        level="INFO",
-        msg="Started fetching price data",
-        extra={"symbol": "AAPL", "interval": "1min"},
-    )
-
-    log_event(
-        stage="ingestion",
-        block="alphavantage_adapter",
-        level="INFO",
-        msg="Successfully fetched 100 records",
-        extra={"symbol": "AAPL", "records": 100},
-    )
-
-    # Test stage logs
-    log_event(
-        stage="quality",
-        block="price_validator_stage",
-        level="WARNING",
-        msg="Missing values detected in dataset",
-        extra={"missing_count": 5, "total_records": 100},
-    )
-
-    # Test error logs
-    log_event(
-        stage="ingestion",
-        block="fmp_adapter",
-        level="ERROR",
-        msg="API request failed",
-        extra={"status_code": 429, "error": "Rate limit exceeded"},
-    )
-
-    # Test pipeline logs
-    log_event(
-        stage="pipeline",
-        block="main_orchestrator",
-        level="INFO",
-        msg="Pipeline completed successfully",
-        extra={"duration_seconds": 45.2, "records_processed": 1500},
-    )
-
-    print("\n✓ Test logs written to logs/ directory")
-    print("Check logs/adapters/, logs/stages/, logs/errors/ for JSONL files")
