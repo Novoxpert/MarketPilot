@@ -1,8 +1,8 @@
-
 """
 Configuration Loader for MarketPilot
 Loads and validates YAML configuration files
 """
+
 from pathlib import Path
 from typing import Dict, Any, List
 import yaml
@@ -11,6 +11,7 @@ from loguru import logger
 
 class ConfigError(Exception):
     """Configuration error"""
+
     pass
 
 
