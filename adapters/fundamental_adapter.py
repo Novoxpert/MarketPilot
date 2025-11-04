@@ -1,5 +1,6 @@
 """
 Resilient Fundamental Adapter using Financial Modeling Prep (FMP)
+Inherits schema validation from BaseAdapter
 """
 
 from typing import Dict, Any
@@ -54,6 +55,9 @@ class ResilientFundamentalAdapter(BaseAdapter):
                 "data": mock_fundamentals,
             }
 
+            # ✅ Validate against schema BEFORE returning
+            self.validate_schema(result_data)
+
             self.log_success(symbol, record_count=1)
 
             return {
@@ -72,7 +76,12 @@ class ResilientFundamentalAdapter(BaseAdapter):
 if __name__ == "__main__":
     import asyncio
 
-    config = {"vendor": "fmp", "id": "fundamental_fmp_001", "cadence": "daily"}
+    config = {
+        "vendor": "fmp",
+        "id": "fundamental_fmp_001",
+        "cadence": "daily",
+        "schema_type": "fundamental",  # ✅ Added schema type
+    }
 
     adapter = ResilientFundamentalAdapter(config)
     result = asyncio.run(adapter.execute_ingest("AAPL"))

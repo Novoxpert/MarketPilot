@@ -1,5 +1,6 @@
 """
 Resilient News Adapter using AlphaVantage
+Inherits schema validation from BaseAdapter
 """
 
 from typing import Dict, Any
@@ -50,6 +51,9 @@ class ResilientNewsAdapter(BaseAdapter):
                 "data": mock_news,
             }
 
+            # ✅ Validate against schema BEFORE returning
+            self.validate_schema(result_data)
+
             self.log_success(symbol, record_count=len(mock_news))
 
             return {
@@ -72,6 +76,7 @@ if __name__ == "__main__":
         "vendor": "alphavantage",
         "id": "news_alphavantage_001",
         "cadence": "daily",
+        "schema_type": "news",  # ✅ Added schema type
     }
 
     adapter = ResilientNewsAdapter(config)

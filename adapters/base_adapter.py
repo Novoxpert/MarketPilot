@@ -6,6 +6,7 @@ All adapters inherit from this class
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 from data_farm.utils.logger import log_event
+from data_farm.config.config_loader import validate_data_columns
 
 
 class BaseAdapter(ABC):
@@ -20,17 +21,19 @@ class BaseAdapter(ABC):
                 - vendor: Vendor name (e.g., 'yfinance', 'alphavantage')
                 - id: Unique adapter ID
                 - cadence: Update frequency (e.g., '1min', 'daily')
+                - schema_type: Schema type for validation (price, news, fundamental)
         """
         self.vendor = config.get("vendor", "unknown")
         self.adapter_id = config.get("id", "unknown")
         self.cadence = config.get("cadence", "daily")
+        self.schema_type = config.get("schema_type", "unknown")
 
         log_event(
             stage="ingestion",
             block=f"{self.vendor}_adapter",
             level="INFO",
             msg=f"Adapter initialized: {self.adapter_id}",
-            extra={"cadence": self.cadence},
+            extra={"cadence": self.cadence, "schema_type": self.schema_type},
         )
 
     @abstractmethod
@@ -45,6 +48,39 @@ class BaseAdapter(ABC):
             Dictionary containing ingested data
         """
         pass
+
+    def validate_schema(self, data: Dict[str, Any]) -> bool:
+        """
+        Validate data against schema
+
+        Args:
+            data: Data to validate
+
+        Returns:
+            True if valid
+
+        Raises:
+            ConfigError: If validation fails
+        """
+        try:
+            validate_data_columns(data, self.schema_type)
+            log_event(
+                stage="ingestion",
+                block=f"{self.vendor}_adapter",
+                level="INFO",
+                msg=f"Schema validation passed for {self.schema_type}",
+                extra={"adapter_id": self.adapter_id},
+            )
+            return True
+        except Exception as e:
+            log_event(
+                stage="ingestion",
+                block=f"{self.vendor}_adapter",
+                level="ERROR",
+                msg=f"Schema validation failed: {str(e)}",
+                extra={"adapter_id": self.adapter_id, "schema_type": self.schema_type},
+            )
+            raise
 
     def log_success(self, symbol: str, record_count: int):
         """Log successful ingestion"""
