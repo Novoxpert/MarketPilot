@@ -1,4 +1,5 @@
 """Story MP-002 Tests for config loader"""
+
 import pytest
 from data_farm.config.config_loader import (
     load_schema,
