@@ -6,7 +6,7 @@ Run with: pytest tests/test_logger.py
 import json
 import pytest
 from datetime import datetime
-from data_farm.utils.logger import log_event, setup_logging, LOG_DIRS
+from src.utils.logger import log_event, setup_logging, LOG_DIRS
 
 
 @pytest.fixture
