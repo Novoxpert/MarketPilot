@@ -5,18 +5,18 @@ Entry point for Market Pilot data ingestion system
 
 from typing import Dict, Any, List
 from pathlib import Path
-from ...config.config_loader import load_config
-from ..utils.logger import log_event, setup_logging
-from adapters.base_adapter import BaseAdapter
-from adapters.price_adapter import ResilientPriceAdapter
-from adapters.news_adapter import ResilientNewsAdapter
-from adapters.fundamental_adapter import ResilientFundamentalAdapter
+from marketpilot.config.config_loader import load_config
+from marketpilot.utils.logger import log_event, setup_logging
+from marketpilot.adapters.base_adapter import BaseAdapter
+from marketpilot.adapters.price_adapter import ResilientPriceAdapter
+from marketpilot.adapters.news_adapter import ResilientNewsAdapter
+from marketpilot.adapters.fundamental_adapter import ResilientFundamentalAdapter
 
 
 class ResilientDataFarm:
     """Main orchestrator class for Data Farm pipeline"""
 
-    def __init__(self, config_path: str = "data_farm/config/data_farm_config.yaml"):
+    def __init__(self, config_path: str = "src/marketpilot/config/data_farm_config.yaml"):
         """
         Initialize ResilientDataFarm
 

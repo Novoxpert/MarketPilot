@@ -11,8 +11,8 @@ import asyncio
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from data_farm.resilient_data_farm import ResilientDataFarm
-from data_farm.utils.logger import log_event
+from marketpilot.data_farm.resilient_data_farm import ResilientDataFarm
+from marketpilot.utils.logger import log_event
 
 
 async def run_smoke_test():
@@ -26,7 +26,7 @@ async def run_smoke_test():
         )
 
         # Initialize Data Farm
-        farm = ResilientDataFarm(config_path="data_farm/config/data_farm_config.yaml")
+        farm = ResilientDataFarm(config_path="src/marketpilot/config/data_farm_config.yaml")
 
         print("\n✅ Data Farm initialized successfully!")
         print(f"📊 Loaded {len(farm.get_adapters())} adapter(s)")

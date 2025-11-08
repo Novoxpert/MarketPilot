@@ -5,8 +5,8 @@ All adapters inherit from this class
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any
-from data_farm.utils.logger import log_event
-from ...config.config_loader import validate_data_columns
+from marketpilot.utils.logger import log_event
+from marketpilot.config.config_loader import validate_data_columns
 
 class BaseAdapter(ABC):
     """Base class for all data adapters"""

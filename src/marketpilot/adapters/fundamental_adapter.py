@@ -5,7 +5,7 @@ Inherits schema validation from BaseAdapter
 
 from typing import Dict, Any
 from datetime import datetime, timedelta
-from adapters.base_adapter import BaseAdapter
+from marketpilot.adapters.base_adapter import BaseAdapter
 
 
 class ResilientFundamentalAdapter(BaseAdapter):

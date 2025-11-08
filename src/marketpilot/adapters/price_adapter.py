@@ -4,7 +4,7 @@ Resilient Price Adapter using YFinance
 
 from typing import Dict, Any
 from datetime import datetime
-from adapters.base_adapter import BaseAdapter
+from marketpilot.adapters.base_adapter import BaseAdapter
 
 
 class ResilientPriceAdapter(BaseAdapter):
