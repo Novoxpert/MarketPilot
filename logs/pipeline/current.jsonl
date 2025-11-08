@@ -1,0 +1,23 @@
+{"timestamp": "2025-11-08T10:58:34.618123", "stage": "initialization", "block": "data_farm", "level": "INFO", "message": "Starting ResilientDataFarm initialization", "config_path": "config/data_farm_config.yaml"}
+{"timestamp": "2025-11-08T11:01:14.801510", "stage": "initialization", "block": "data_farm", "level": "INFO", "message": "Starting ResilientDataFarm initialization", "config_path": "config/data_farm_config.yaml"}
+{"timestamp": "2025-11-08T11:02:04.633970", "stage": "initialization", "block": "data_farm", "level": "INFO", "message": "Starting ResilientDataFarm initialization", "config_path": "config/data_farm_config.yaml"}
+{"timestamp": "2025-11-08T11:02:13.079929", "stage": "initialization", "block": "data_farm", "level": "INFO", "message": "Starting ResilientDataFarm initialization", "config_path": "config/data_farm_config.yaml"}
+{"timestamp": "2025-11-08T11:02:20.726067", "stage": "initialization", "block": "data_farm", "level": "INFO", "message": "Starting ResilientDataFarm initialization", "config_path": "config/data_farm_config.yaml"}
+{"timestamp": "2025-11-08T11:02:49.624340", "stage": "initialization", "block": "data_farm", "level": "INFO", "message": "Starting ResilientDataFarm initialization", "config_path": "src/marketpilot/config/data_farm_config.yaml"}
+{"timestamp": "2025-11-08T11:02:49.624340", "stage": "initialization", "block": "components", "level": "INFO", "message": "Initializing core components"}
+{"timestamp": "2025-11-08T11:02:49.624340", "stage": "initialization", "block": "components", "level": "INFO", "message": "Core components initialized", "log_level": "INFO", "output_dir": "data/output"}
+{"timestamp": "2025-11-08T11:02:49.624340", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Loading adapters from configuration"}
+{"timestamp": "2025-11-08T11:02:49.630660", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Adapter loaded successfully", "adapter_id": "price_yfinance_001", "adapter_type": "price", "vendor": "yfinance"}
+{"timestamp": "2025-11-08T11:02:49.631446", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Adapter loaded successfully", "adapter_id": "news_alphavantage_001", "adapter_type": "news", "vendor": "alphavantage"}
+{"timestamp": "2025-11-08T11:02:49.637076", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Adapter loaded successfully", "adapter_id": "fundamental_fmp_001", "adapter_type": "fundamental", "vendor": "fmp"}
+{"timestamp": "2025-11-08T11:02:49.638081", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Adapter initialization complete", "total_adapters": 3}
+{"timestamp": "2025-11-08T11:02:49.639084", "stage": "initialization", "block": "data_farm", "level": "INFO", "message": "ResilientDataFarm initialization complete", "adapters_loaded": 3, "config_loaded": true}
+{"timestamp": "2025-11-08T11:09:01.243230", "stage": "initialization", "block": "data_farm", "level": "INFO", "message": "Starting ResilientDataFarm initialization", "config_path": "src/marketpilot/config/data_farm_config.yaml"}
+{"timestamp": "2025-11-08T11:09:01.248476", "stage": "initialization", "block": "components", "level": "INFO", "message": "Initializing core components"}
+{"timestamp": "2025-11-08T11:09:01.250480", "stage": "initialization", "block": "components", "level": "INFO", "message": "Core components initialized", "log_level": "INFO", "output_dir": "data/output"}
+{"timestamp": "2025-11-08T11:09:01.250480", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Loading adapters from configuration"}
+{"timestamp": "2025-11-08T11:09:01.252480", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Adapter loaded successfully", "adapter_id": "price_yfinance_001", "adapter_type": "price", "vendor": "yfinance"}
+{"timestamp": "2025-11-08T11:09:01.253480", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Adapter loaded successfully", "adapter_id": "news_alphavantage_001", "adapter_type": "news", "vendor": "alphavantage"}
+{"timestamp": "2025-11-08T11:09:01.255478", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Adapter loaded successfully", "adapter_id": "fundamental_fmp_001", "adapter_type": "fundamental", "vendor": "fmp"}
+{"timestamp": "2025-11-08T11:09:01.255478", "stage": "initialization", "block": "adapters", "level": "INFO", "message": "Adapter initialization complete", "total_adapters": 3}
+{"timestamp": "2025-11-08T11:09:01.256478", "stage": "initialization", "block": "data_farm", "level": "INFO", "message": "ResilientDataFarm initialization complete", "adapters_loaded": 3, "config_loaded": true}

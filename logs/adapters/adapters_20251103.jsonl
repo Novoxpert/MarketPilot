@@ -1,0 +1,30 @@
+{"timestamp": "2025-11-03T12:58:55.427818", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Started fetching price data", "symbol": "AAPL", "interval": "1min"}
+{"timestamp": "2025-11-03T12:58:55.427818", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Successfully fetched 100 records", "symbol": "AAPL", "records": 100}
+{"timestamp": "2025-11-03T12:58:55.430015", "stage": "ingestion", "block": "fmp_adapter", "level": "ERROR", "message": "API request failed", "status_code": 429, "error": "Rate limit exceeded"}
+{"timestamp": "2025-11-03T13:27:07.952211", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Test adapter log", "symbol": "AAPL"}
+{"timestamp": "2025-11-03T13:27:07.979267", "stage": "ingestion", "block": "fmp_adapter", "level": "ERROR", "message": "Test error log", "error_code": 500}
+{"timestamp": "2025-11-03T13:27:08.038213", "stage": "ingestion", "block": "test_adapter", "level": "INFO", "message": "Test with extra fields", "symbol": "AAPL", "records": 100, "api_version": "v2", "response_time": 1.23}
+{"timestamp": "2025-11-03T13:30:23.310125", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Test adapter log", "symbol": "AAPL"}
+{"timestamp": "2025-11-03T13:30:23.374339", "stage": "ingestion", "block": "test_adapter", "level": "INFO", "message": "Test with extra fields", "symbol": "AAPL", "records": 100, "api_version": "v2", "response_time": 1.23}
+{"timestamp": "2025-11-03T14:03:40.808979", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Test adapter log", "symbol": "AAPL"}
+{"timestamp": "2025-11-03T14:03:40.861320", "stage": "ingestion", "block": "test_adapter", "level": "INFO", "message": "Test with extra fields", "symbol": "AAPL", "records": 100, "api_version": "v2", "response_time": 1.23}
+{"timestamp": "2025-11-03T14:03:59.409353", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Started fetching price data", "symbol": "AAPL", "interval": "1min"}
+{"timestamp": "2025-11-03T14:03:59.410858", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Successfully fetched 100 records", "symbol": "AAPL", "records": 100}
+{"timestamp": "2025-11-03T15:04:54.130266", "stage": "ingestion", "block": "fmp_adapter", "level": "INFO", "message": "Adapter initialized: fundamental_fmp_001", "cadence": "daily"}
+{"timestamp": "2025-11-03T15:04:54.131808", "stage": "ingestion", "block": "fmp_adapter", "level": "INFO", "message": "Successfully ingested data for AAPL", "symbol": "AAPL", "records": 1, "adapter_id": "fundamental_fmp_001"}
+{"timestamp": "2025-11-03T15:05:17.988977", "stage": "ingestion", "block": "fmp_adapter", "level": "INFO", "message": "Adapter initialized: fundamental_fmp_001", "cadence": "daily"}
+{"timestamp": "2025-11-03T15:05:17.988977", "stage": "ingestion", "block": "fmp_adapter", "level": "INFO", "message": "Successfully ingested data for AAPL", "symbol": "AAPL", "records": 1, "adapter_id": "fundamental_fmp_001"}
+{"timestamp": "2025-11-03T15:06:52.284730", "stage": "ingestion", "block": "yfinance_adapter", "level": "INFO", "message": "Adapter initialized: test_price_001", "cadence": "1min"}
+{"timestamp": "2025-11-03T15:06:52.288899", "stage": "ingestion", "block": "yfinance_adapter", "level": "INFO", "message": "Successfully ingested data for AAPL", "symbol": "AAPL", "records": 1, "adapter_id": "test_price_001"}
+{"timestamp": "2025-11-03T15:06:52.293166", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Adapter initialized: test_news_001", "cadence": "daily"}
+{"timestamp": "2025-11-03T15:06:52.293166", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Successfully ingested data for AAPL", "symbol": "AAPL", "records": 2, "adapter_id": "test_news_001"}
+{"timestamp": "2025-11-03T15:06:52.293166", "stage": "ingestion", "block": "fmp_adapter", "level": "INFO", "message": "Adapter initialized: test_fundamental_001", "cadence": "daily"}
+{"timestamp": "2025-11-03T15:06:52.299039", "stage": "ingestion", "block": "fmp_adapter", "level": "INFO", "message": "Successfully ingested data for AAPL", "symbol": "AAPL", "records": 1, "adapter_id": "test_fundamental_001"}
+{"timestamp": "2025-11-03T15:06:52.302631", "stage": "ingestion", "block": "yfinance_adapter", "level": "INFO", "message": "Adapter initialized: price_001", "cadence": "1min"}
+{"timestamp": "2025-11-03T15:06:52.302631", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Adapter initialized: news_001", "cadence": "daily"}
+{"timestamp": "2025-11-03T15:06:52.303637", "stage": "ingestion", "block": "fmp_adapter", "level": "INFO", "message": "Adapter initialized: fundamental_001", "cadence": "daily"}
+{"timestamp": "2025-11-03T15:06:52.303637", "stage": "ingestion", "block": "yfinance_adapter", "level": "INFO", "message": "Successfully ingested data for TSLA", "symbol": "TSLA", "records": 1, "adapter_id": "price_001"}
+{"timestamp": "2025-11-03T15:06:52.304635", "stage": "ingestion", "block": "alphavantage_adapter", "level": "INFO", "message": "Successfully ingested data for TSLA", "symbol": "TSLA", "records": 2, "adapter_id": "news_001"}
+{"timestamp": "2025-11-03T15:06:52.304635", "stage": "ingestion", "block": "fmp_adapter", "level": "INFO", "message": "Successfully ingested data for TSLA", "symbol": "TSLA", "records": 1, "adapter_id": "fundamental_001"}
+{"timestamp": "2025-11-03T15:06:52.306636", "stage": "ingestion", "block": "yfinance_adapter", "level": "INFO", "message": "Adapter initialized: test_log_001", "cadence": "1min"}
+{"timestamp": "2025-11-03T15:06:52.306636", "stage": "ingestion", "block": "yfinance_adapter", "level": "INFO", "message": "Successfully ingested data for AAPL", "symbol": "AAPL", "records": 1, "adapter_id": "test_log_001"}
