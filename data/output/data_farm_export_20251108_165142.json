@@ -1,0 +1,107 @@
+{
+  "exported_at": "2025-11-08T16:51:42.322174",
+  "total_records": 2,
+  "pipeline_stats": {
+    "health_check": {
+      "total_adapters": 3,
+      "healthy": 3,
+      "unhealthy": 0,
+      "details": [
+        {
+          "adapter_id": "price_yfinance_001",
+          "status": "healthy"
+        },
+        {
+          "adapter_id": "news_alphavantage_001",
+          "status": "healthy"
+        },
+        {
+          "adapter_id": "fundamental_fmp_001",
+          "status": "healthy"
+        }
+      ]
+    },
+    "nan_stats": {
+      "nan_count": 0
+    },
+    "alignment_stats": {
+      "aligned_count": 2
+    },
+    "dedup_stats": {
+      "duplicates_removed": 0,
+      "unique_records": 6
+    },
+    "qa_stats": {
+      "qa_passed": 2,
+      "qa_failed": 4,
+      "pass_rate": "33.3%",
+      "issues": [
+        {
+          "symbol": "AAPL",
+          "adapter_id": "news_alphavantage_001",
+          "issues": [
+            "Missing timestamp field"
+          ]
+        },
+        {
+          "symbol": "NVDA",
+          "adapter_id": "news_alphavantage_001",
+          "issues": [
+            "Missing timestamp field"
+          ]
+        },
+        {
+          "symbol": "AAPL",
+          "adapter_id": "fundamental_fmp_001",
+          "issues": [
+            "Missing timestamp field"
+          ]
+        },
+        {
+          "symbol": "NVDA",
+          "adapter_id": "fundamental_fmp_001",
+          "issues": [
+            "Missing timestamp field"
+          ]
+        }
+      ],
+      "total_records": 6
+    }
+  },
+  "data": [
+    {
+      "adapter_id": "price_yfinance_001",
+      "symbol": "AAPL",
+      "vendor": "yfinance",
+      "data": {
+        "symbol": "AAPL",
+        "timestamp": "2025-11-08T16:51:42.295163",
+        "open": 150.0,
+        "high": 155.0,
+        "low": 148.0,
+        "close": 152.0,
+        "volume": 1000000,
+        "adjusted_close": 152.0,
+        "timestamp_aligned": true
+      },
+      "ingested_at": "2025-11-08T16:51:42.295163"
+    },
+    {
+      "adapter_id": "price_yfinance_001",
+      "symbol": "NVDA",
+      "vendor": "yfinance",
+      "data": {
+        "symbol": "NVDA",
+        "timestamp": "2025-11-08T16:51:42.295163",
+        "open": 150.0,
+        "high": 155.0,
+        "low": 148.0,
+        "close": 152.0,
+        "volume": 1000000,
+        "adjusted_close": 152.0,
+        "timestamp_aligned": true
+      },
+      "ingested_at": "2025-11-08T16:51:42.302575"
+    }
+  ]
+}

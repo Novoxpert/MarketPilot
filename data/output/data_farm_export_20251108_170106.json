@@ -1,0 +1,202 @@
+{
+  "exported_at": "2025-11-08T17:01:06.158000",
+  "total_records": 6,
+  "pipeline_stats": {
+    "health_check": {
+      "total_adapters": 3,
+      "healthy": 3,
+      "unhealthy": 0,
+      "details": [
+        {
+          "adapter_id": "price_yfinance_001",
+          "status": "healthy"
+        },
+        {
+          "adapter_id": "news_alphavantage_001",
+          "status": "healthy"
+        },
+        {
+          "adapter_id": "fundamental_fmp_001",
+          "status": "healthy"
+        }
+      ]
+    },
+    "nan_stats": {
+      "nan_count": 0
+    },
+    "alignment_stats": {
+      "aligned_count": 6
+    },
+    "dedup_stats": {
+      "duplicates_removed": 0,
+      "unique_records": 6
+    },
+    "qa_stats": {
+      "qa_passed": 6,
+      "qa_failed": 0,
+      "pass_rate": "100.0%",
+      "issues": [],
+      "total_records": 6
+    }
+  },
+  "data": [
+    {
+      "adapter_id": "price_yfinance_001",
+      "symbol": "AAPL",
+      "vendor": "yfinance",
+      "data": {
+        "symbol": "AAPL",
+        "timestamp": "2025-11-08T17:01:06.137444",
+        "open": 150.0,
+        "high": 155.0,
+        "low": 148.0,
+        "close": 152.0,
+        "volume": 1000000,
+        "adjusted_close": 152.0,
+        "timestamp_aligned": true
+      },
+      "ingested_at": "2025-11-08T17:01:06.140625"
+    },
+    {
+      "adapter_id": "price_yfinance_001",
+      "symbol": "NVDA",
+      "vendor": "yfinance",
+      "data": {
+        "symbol": "NVDA",
+        "timestamp": "2025-11-08T17:01:06.140625",
+        "open": 150.0,
+        "high": 155.0,
+        "low": 148.0,
+        "close": 152.0,
+        "volume": 1000000,
+        "adjusted_close": 152.0,
+        "timestamp_aligned": true
+      },
+      "ingested_at": "2025-11-08T17:01:06.143564"
+    },
+    {
+      "adapter_id": "news_alphavantage_001",
+      "symbol": "AAPL",
+      "vendor": "alphavantage",
+      "data": {
+        "symbol": "AAPL",
+        "timestamp": "2025-11-08T17:01:06.143564",
+        "startdate": "2025-11-07T17:01:06.143564",
+        "enddate": "2025-11-08T17:01:06.143564",
+        "data": [
+          {
+            "title": "AAPL Stock Analysis",
+            "url": "https://example.com/news1",
+            "published_at": "2025-11-08T17:01:06.143564",
+            "sentiment": "positive"
+          },
+          {
+            "title": "AAPL Quarterly Earnings",
+            "url": "https://example.com/news2",
+            "published_at": "2025-11-08T14:01:06.143564",
+            "sentiment": "neutral"
+          }
+        ],
+        "timestamp_aligned": true
+      },
+      "ingested_at": "2025-11-08T17:01:06.145067"
+    },
+    {
+      "adapter_id": "news_alphavantage_001",
+      "symbol": "NVDA",
+      "vendor": "alphavantage",
+      "data": {
+        "symbol": "NVDA",
+        "timestamp": "2025-11-08T17:01:06.145067",
+        "startdate": "2025-11-07T17:01:06.145067",
+        "enddate": "2025-11-08T17:01:06.145067",
+        "data": [
+          {
+            "title": "NVDA Stock Analysis",
+            "url": "https://example.com/news1",
+            "published_at": "2025-11-08T17:01:06.145067",
+            "sentiment": "positive"
+          },
+          {
+            "title": "NVDA Quarterly Earnings",
+            "url": "https://example.com/news2",
+            "published_at": "2025-11-08T14:01:06.145067",
+            "sentiment": "neutral"
+          }
+        ],
+        "timestamp_aligned": true
+      },
+      "ingested_at": "2025-11-08T17:01:06.147971"
+    },
+    {
+      "adapter_id": "fundamental_fmp_001",
+      "symbol": "AAPL",
+      "vendor": "fmp",
+      "data": {
+        "symbol": "AAPL",
+        "timestamp": "2025-11-08T17:01:06.147971",
+        "startdate": "2024-11-08T17:01:06.147971",
+        "enddate": "2025-11-08T17:01:06.147971",
+        "data": {
+          "income_statement": {
+            "revenue": 394328000000,
+            "net_income": 99803000000,
+            "eps": 6.15
+          },
+          "balance_sheet": {
+            "total_assets": 352755000000,
+            "total_liabilities": 302083000000,
+            "stockholders_equity": 50672000000
+          },
+          "cash_flow": {
+            "operating_cash_flow": 122151000000,
+            "capital_expenditure": -10959000000,
+            "free_cash_flow": 111192000000
+          },
+          "ratios": {
+            "pe_ratio": 28.5,
+            "debt_to_equity": 5.96,
+            "roe": 0.196
+          }
+        },
+        "timestamp_aligned": true
+      },
+      "ingested_at": "2025-11-08T17:01:06.148976"
+    },
+    {
+      "adapter_id": "fundamental_fmp_001",
+      "symbol": "NVDA",
+      "vendor": "fmp",
+      "data": {
+        "symbol": "NVDA",
+        "timestamp": "2025-11-08T17:01:06.148976",
+        "startdate": "2024-11-08T17:01:06.148976",
+        "enddate": "2025-11-08T17:01:06.148976",
+        "data": {
+          "income_statement": {
+            "revenue": 394328000000,
+            "net_income": 99803000000,
+            "eps": 6.15
+          },
+          "balance_sheet": {
+            "total_assets": 352755000000,
+            "total_liabilities": 302083000000,
+            "stockholders_equity": 50672000000
+          },
+          "cash_flow": {
+            "operating_cash_flow": 122151000000,
+            "capital_expenditure": -10959000000,
+            "free_cash_flow": 111192000000
+          },
+          "ratios": {
+            "pe_ratio": 28.5,
+            "debt_to_equity": 5.96,
+            "roe": 0.196
+          }
+        },
+        "timestamp_aligned": true
+      },
+      "ingested_at": "2025-11-08T17:01:06.148976"
+    }
+  ]
+}
