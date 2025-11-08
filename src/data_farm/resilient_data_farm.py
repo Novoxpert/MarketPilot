@@ -5,8 +5,8 @@ Entry point for Market Pilot data ingestion system
 
 from typing import Dict, Any, List
 from pathlib import Path
-from data_farm.config.config_loader import load_config
-from data_farm.utils.logger import log_event, setup_logging
+from ...config.config_loader import load_config
+from ..utils.logger import log_event, setup_logging
 from adapters.base_adapter import BaseAdapter
 from adapters.price_adapter import ResilientPriceAdapter
 from adapters.news_adapter import ResilientNewsAdapter
