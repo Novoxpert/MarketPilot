@@ -1,0 +1,13 @@
+# Fundamental Data Schema
+type: fundamental
+required_columns:
+  - symbol
+  - startdate
+  - enddate
+  - data
+
+data_types:
+  symbol: string
+  startdate: datetime
+  enddate: datetime
+  data: object
