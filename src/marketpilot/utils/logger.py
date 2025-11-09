@@ -9,7 +9,9 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-# Log directories
+# -----------------------------
+# Base Directories
+# -----------------------------
 LOG_BASE = Path("logs")
 LOG_DIRS = {
     "pipeline": LOG_BASE / "pipeline",
@@ -18,35 +20,58 @@ LOG_DIRS = {
     "errors": LOG_BASE / "errors",
 }
 
-# Log level mapping
-LOG_LEVELS = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "CRITICAL": logging.CRITICAL,
-}
 
-
+# -----------------------------
+# Helpers
+# -----------------------------
 def _create_log_dirs():
-    """Create log directories if they don't exist"""
-    for dir_path in LOG_DIRS.values():
-        dir_path.mkdir(parents=True, exist_ok=True)
+    for d in LOG_DIRS.values():
+        d.mkdir(parents=True, exist_ok=True)
 
 
-def _get_log_file(category: str, stage: str = "") -> Path:
-    """Get log file path for a category"""
-    log_dir = LOG_DIRS.get(category, LOG_DIRS["pipeline"])
+def _get_log_file(category: str, stage: str) -> Path:
+    """
+    Rules:
+    - initialization → logs/pipeline/current.jsonl   (MP-005 requirement)
+    - all others → timestamped daily files
+    """
+    if stage == "initialization":
+        return LOG_DIRS["pipeline"] / "current.jsonl"
 
-    # For initialization stage in pipeline, use 'current.jsonl' (MP-005 requirement)
-    if category == "pipeline" and stage == "initialization":
-        return log_dir / "current.jsonl"
-
-    # For all other logs, use timestamped files
     timestamp = datetime.now().strftime("%Y%m%d")
-    return log_dir / f"{category}_{timestamp}.jsonl"
+    return LOG_DIRS[category] / f"{category}_{timestamp}.jsonl"
 
 
+# -----------------------------
+# Categorization Logic
+# -----------------------------
+def _detect_category(stage: str, block: str, level: str) -> str:
+    if stage == "initialization":
+        return "pipeline"
+
+    if level in ("ERROR", "CRITICAL"):
+        return "errors"
+
+    if "adapter" in block.lower():
+        return "adapters"
+
+    if stage.lower() in [
+        "health_check",
+        "data_collection",
+        "nan_processing",
+        "temporal_alignment",
+        "deduplication",
+        "quality_assurance",
+        "export",
+    ]:
+        return "stages"
+
+    return "pipeline"
+
+
+# -----------------------------
+# Main Log Event
+# -----------------------------
 def log_event(
     stage: str,
     block: str,
@@ -54,39 +79,12 @@ def log_event(
     msg: str = "",
     extra: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """
-    Log an event in JSONL format
-
-    Args:
-        stage: Pipeline stage (e.g., 'ingestion', 'quality')
-        block: Component block (e.g., 'alphavantage_adapter', 'price_validator')
-        level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        msg: Log message
-        extra: Additional fields to include in log
-
-    Example:
-        log_event('ingestion', 'fmp_adapter', 'INFO', 'Fetched 100 records', {'symbol': 'AAPL'})
-    """
-    # Create directories if needed
     _create_log_dirs()
-    if stage == "initialization":
-        category = "pipeline"
-    # THEN: Check other conditions
-    elif level in ["ERROR", "CRITICAL"]:
-        category = "errors"
-    elif "adapter" in block.lower():
-        category = "adapters"
-    elif "stage" in block.lower() or stage.lower() in [
-        "ingestion",
-        "quality",
-        "storage",
-    ]:
-        category = "stages"
-    else:
-        category = "pipeline"
 
-    # Build log entry
-    log_entry = {
+    category = _detect_category(stage, block, level)
+    log_file = _get_log_file(category, stage)
+
+    entry = {
         "timestamp": datetime.now().isoformat(),
         "stage": stage,
         "block": block,
@@ -94,36 +92,29 @@ def log_event(
         "message": msg,
     }
 
-    # Add extra fields
-    if extra:
-        log_entry.update(extra)
+    if extra is not None:
+        entry["extra"] = extra
 
-    # Write to JSONL file
-    log_file = _get_log_file(category, stage)  # Pass stage here
     with open(log_file, "a", encoding="utf-8") as f:
-        f.write(json.dumps(log_entry) + "\n")
+        f.write(json.dumps(entry) + "\n")
 
-    # Also print to console for development
-    print(f"[{level}] {stage}.{block}: {msg}")
+    print(f"[{level}] {stage}.{block}: {msg}")  # dev mode
 
 
+# -----------------------------
+# Setup
+# -----------------------------
 def setup_logging(log_level: str = "INFO"):
-    """
-    Initialize logging system
-
-    Args:
-        log_level: Minimum log level to capture (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    """
     _create_log_dirs()
 
-    # Configure Python's logging module
     logging.basicConfig(
-        level=LOG_LEVELS.get(log_level.upper(), logging.INFO),
+        level=getattr(logging, log_level.upper(), logging.INFO),
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
+    # Must be initialization stage for MP-005
     log_event(
-        "system",
+        "initialization",
         "logger",
         "INFO",
         "Logging system initialized",
@@ -131,7 +122,6 @@ def setup_logging(log_level: str = "INFO"):
     )
 
 
-# Example usage and tests
+# For testing
 if __name__ == "__main__":
-    # Initialize logging
     setup_logging("DEBUG")

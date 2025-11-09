@@ -80,7 +80,7 @@ System logs warnings when:
 
 ### In Pipeline Code
 ```python
-from marketpilot.validation.schema_validator import validate_pipeline_stages
+from marketpilot.utils.schema_validator import validate_pipeline_stages
 
 # After pipeline execution
 validation_report = validate_pipeline_stages(pipeline_data)
@@ -91,7 +91,7 @@ if not validation_report["validation_passed"]:
 
 ### Manual Validation
 ```python
-from marketpilot.validation.schema_validator import SchemaValidator
+from marketpilot.utils.schema_validator import SchemaValidator
 
 validator = SchemaValidator()
 

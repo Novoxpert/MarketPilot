@@ -23,7 +23,7 @@ from marketpilot.data_farm.stages.quality_assurance import QualityAssuranceStage
 from marketpilot.data_farm.stages.data_export import DataExportStage
 
 # ✅ NEW: Import schema validator (MP-008)
-from marketpilot.validation.schema_validator import validate_pipeline_stages
+from marketpilot.utils.schema_validator import validate_pipeline_stages
 
 
 class ResilientDataFarm:

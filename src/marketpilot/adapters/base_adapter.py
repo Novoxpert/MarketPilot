@@ -5,12 +5,14 @@ All adapters inherit from this class
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any
+from datetime import datetime
+import uuid
 from marketpilot.utils.logger import log_event
 from marketpilot.config.config_loader import validate_data_columns
 
 
 class BaseAdapter(ABC):
-    """Base class for all data adapters"""
+    """Base class for all data adapters with enhanced logging"""
 
     def __init__(self, config: Dict[str, Any]):
         """
@@ -36,10 +38,90 @@ class BaseAdapter(ABC):
             extra={"cadence": self.cadence, "schema_type": self.schema_type},
         )
 
-    @abstractmethod
     async def execute_ingest(self, symbol: str) -> Dict[str, Any]:
         """
-        Execute data ingestion for a symbol
+        Execute data ingestion with enhanced logging
+
+        Args:
+            symbol: Asset symbol (e.g., 'AAPL', 'TSLA')
+
+        Returns:
+            Dictionary containing ingested data
+        """
+        # Generate unique operation ID
+        operation_id = str(uuid.uuid4())[:8]
+        start_time = datetime.now()
+
+        # ✅ MP-009: Log ingestion start
+        log_event(
+            stage="ingestion",
+            block=f"{self.vendor}_adapter",
+            level="INFO",
+            msg=f"Starting ingestion for {symbol}",
+            extra={
+                "operation_id": operation_id,
+                "adapter_id": self.adapter_id,
+                "symbol": symbol,
+                "timestamp": start_time.isoformat(),
+            },
+        )
+
+        try:
+            # Execute the actual ingestion
+            result = await self._execute_ingest_internal(symbol)
+
+            end_time = datetime.now()
+            duration_ms = (end_time - start_time).total_seconds() * 1000
+
+            # ✅ MP-009: Log successful ingestion with metrics
+            record_count = 1 if result.get("success") else 0
+
+            log_event(
+                stage="ingestion",
+                block=f"{self.vendor}_adapter",
+                level="INFO",
+                msg=f"Completed ingestion for {symbol}",
+                extra={
+                    "operation_id": operation_id,
+                    "adapter_id": self.adapter_id,
+                    "symbol": symbol,
+                    "duration_ms": round(duration_ms, 2),
+                    "records_processed": record_count,
+                    "success_flag": result.get("success", False),
+                    "timestamp": end_time.isoformat(),
+                },
+            )
+
+            return result
+
+        except Exception as e:
+            end_time = datetime.now()
+            duration_ms = (end_time - start_time).total_seconds() * 1000
+
+            # ✅ MP-009: Log ingestion failure
+            log_event(
+                stage="ingestion",
+                block=f"{self.vendor}_adapter",
+                level="ERROR",
+                msg=f"Failed ingestion for {symbol}: {str(e)}",
+                extra={
+                    "operation_id": operation_id,
+                    "adapter_id": self.adapter_id,
+                    "symbol": symbol,
+                    "duration_ms": round(duration_ms, 2),
+                    "success_flag": False,
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "timestamp": end_time.isoformat(),
+                },
+            )
+
+            return {"success": False, "error": str(e), "vendor": self.vendor}
+
+    @abstractmethod
+    async def _execute_ingest_internal(self, symbol: str) -> Dict[str, Any]:
+        """
+        Execute data ingestion for a symbol (to be implemented by subclasses)
 
         Args:
             symbol: Asset symbol (e.g., 'AAPL', 'TSLA')
@@ -83,7 +165,7 @@ class BaseAdapter(ABC):
             raise
 
     def log_success(self, symbol: str, record_count: int):
-        """Log successful ingestion"""
+        """Log successful ingestion (deprecated - use execute_ingest logging)"""
         log_event(
             stage="ingestion",
             block=f"{self.vendor}_adapter",
@@ -97,7 +179,7 @@ class BaseAdapter(ABC):
         )
 
     def log_error(self, symbol: str, error: str):
-        """Log ingestion error"""
+        """Log ingestion error (deprecated - use execute_ingest logging)"""
         log_event(
             stage="ingestion",
             block=f"{self.vendor}_adapter",
