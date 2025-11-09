@@ -1,7 +1,6 @@
 """
-ResilientDataFarm - Main orchestrator for all adapters
-Entry point for Market Pilot data ingestion system
-Updated with full pipeline integration (MP-007)
+ResilientDataFarm - Updated with Schema Validation (MP-008)
+Added automatic validation after pipeline execution
 """
 
 from typing import Dict, Any, List
@@ -23,9 +22,12 @@ from marketpilot.data_farm.stages.deduplication import DeduplicationStage
 from marketpilot.data_farm.stages.quality_assurance import QualityAssuranceStage
 from marketpilot.data_farm.stages.data_export import DataExportStage
 
+# ✅ NEW: Import schema validator (MP-008)
+from marketpilot.validation.schema_validator import validate_pipeline_stages
+
 
 class ResilientDataFarm:
-    """Main orchestrator class for Data Farm pipeline"""
+    """Main orchestrator class for Data Farm pipeline with validation"""
 
     def __init__(
         self, config_path: str = "src/marketpilot/config/data_farm_config.yaml"
@@ -88,7 +90,7 @@ class ResilientDataFarm:
         log_level = self.config.get("logging", {}).get("level", "INFO")
         setup_logging(log_level)
 
-        # Create output directories if specified
+        # Create output directories
         output_dir = self.config.get("output", {}).get("base_dir", "data/output")
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
@@ -109,7 +111,6 @@ class ResilientDataFarm:
             msg="Loading adapters from configuration",
         )
 
-        # Get adapters config
         adapters_config = self.config.get("adapters", [])
 
         if not adapters_config:
@@ -134,7 +135,6 @@ class ResilientDataFarm:
             adapter_id = adapter_config.get("id", "unknown")
 
             try:
-                # Get the appropriate adapter class
                 adapter_class = adapter_classes.get(adapter_type)
 
                 if not adapter_class:
@@ -188,7 +188,7 @@ class ResilientDataFarm:
             symbols: List of symbols to process
 
         Returns:
-            Complete pipeline results
+            Complete pipeline results with validation report
         """
         pipeline_start = datetime.now()
 
@@ -224,6 +224,41 @@ class ResilientDataFarm:
                 # Execute stage
                 pipeline_data = await stage.execute(pipeline_data)
 
+            # ✅ NEW: Validate pipeline schema consistency (MP-008)
+            log_event(
+                stage="pipeline",
+                block="validation",
+                level="INFO",
+                msg="Running schema validation",
+            )
+
+            validation_report = validate_pipeline_stages(pipeline_data)
+            pipeline_data["validation_report"] = validation_report
+
+            # Log validation results
+            if validation_report["validation_passed"]:
+                log_event(
+                    stage="pipeline",
+                    block="validation",
+                    level="INFO",
+                    msg="Schema validation PASSED",
+                    extra={
+                        "stages_validated": len(validation_report["stages_validated"]),
+                        "warnings": len(validation_report["warnings"]),
+                    },
+                )
+            else:
+                log_event(
+                    stage="pipeline",
+                    block="validation",
+                    level="ERROR",
+                    msg="Schema validation FAILED",
+                    extra={
+                        "errors": validation_report["errors"],
+                        "warnings": validation_report["warnings"],
+                    },
+                )
+
             # Pipeline complete
             pipeline_end = datetime.now()
             pipeline_duration = (pipeline_end - pipeline_start).total_seconds()
@@ -236,6 +271,7 @@ class ResilientDataFarm:
                 extra={
                     "total_duration_seconds": pipeline_duration,
                     "stages_completed": len(self.stages),
+                    "validation_passed": validation_report["validation_passed"],
                 },
             )
 
@@ -269,7 +305,7 @@ class ResilientDataFarm:
             symbols: List of symbols to process
 
         Returns:
-            Pipeline results
+            Pipeline results with validation report
         """
         return await self._execute_complete_pipeline(symbols)
 
@@ -278,7 +314,7 @@ class ResilientDataFarm:
         Run smoke test across all adapters for given symbols
 
         Args:
-            symbols: List of asset symbols to test (e.g., ['AAPL', 'NVDA', 'TSLA'])
+            symbols: List of asset symbols to test
 
         Returns:
             Dictionary with test results
@@ -299,13 +335,11 @@ class ResilientDataFarm:
             "details": [],
         }
 
-        # Run each adapter for each symbol
         for adapter in self.adapters:
             for symbol in symbols:
                 results["total_tests"] += 1
 
                 try:
-                    # Execute adapter ingestion
                     result = await adapter.execute_ingest(symbol)
 
                     if result.get("success"):
@@ -340,19 +374,6 @@ class ResilientDataFarm:
                         }
                     )
 
-                    log_event(
-                        stage="smoke_test",
-                        block="data_farm",
-                        level="ERROR",
-                        msg="Exception during smoke test",
-                        extra={
-                            "adapter_id": adapter.adapter_id,
-                            "symbol": symbol,
-                            "error": str(e),
-                        },
-                    )
-
-        # Final summary
         log_event(
             stage="smoke_test",
             block="data_farm",
