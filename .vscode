@@ -1,0 +1,6 @@
+{
+    "python.pythonPath": "C:\\Users\\Elham\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\marketpilot-0MPLGKsm-py3.11\\Scripts\\python.exe",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/src"
+    ]
+}

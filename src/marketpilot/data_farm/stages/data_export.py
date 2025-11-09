@@ -65,7 +65,7 @@ class DataExportStage(BaseStage):
                 stage=self.stage_name,
                 block="data_export",
                 level="INFO",
-                msg=f"Data exported successfully",
+                msg="Data exported successfully",
                 extra={
                     "file": str(export_file),
                     "records_exported": len(validated_data),

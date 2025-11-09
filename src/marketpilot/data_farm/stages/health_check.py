@@ -29,7 +29,7 @@ class HealthCheckStage(BaseStage):
                 adapter_id = adapter.get("adapter_id", "unknown")
             else:
                 adapter_id = getattr(adapter, "adapter_id", "unknown")
-            
+
             health_status["details"].append(
                 {"adapter_id": adapter_id, "status": "healthy"}
             )

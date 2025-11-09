@@ -26,12 +26,14 @@ async def run_complete_pipeline():
         )
 
         # Initialize Data Farm
-        farm = ResilientDataFarm(config_path="src/marketpilot/config/data_farm_config.yaml")
+        farm = ResilientDataFarm(
+            config_path="src/marketpilot/config/data_farm_config.yaml"
+        )
 
         print("\n" + "=" * 80)
         print("🚀 DATA FARM COMPLETE PIPELINE - MP-007")
         print("=" * 80)
-        print(f"\n✅ Data Farm initialized successfully!")
+        print("\n✅ Data Farm initialized successfully!")
         print(f"📊 Loaded {len(farm.get_adapters())} adapter(s)")
         print(f"🔧 Loaded {len(farm.stages)} stage(s)")
 
@@ -55,7 +57,7 @@ async def run_complete_pipeline():
 
         # Show stage results
         print("\n🔍 Stage-by-Stage Results:\n")
-        
+
         # stage_times = []
         for stage in farm.stages:
             stage_name = stage.stage_name
@@ -67,7 +69,9 @@ async def run_complete_pipeline():
 
         # Health check
         health_check = results.get("health_check", {})
-        print(f"   🏥 Adapters Healthy: {health_check.get('healthy', 0)}/{health_check.get('total_adapters', 0)}")
+        print(
+            f"   🏥 Adapters Healthy: {health_check.get('healthy', 0)}/{health_check.get('total_adapters', 0)}"
+        )
 
         # Data collection
         raw_data = results.get("raw_data", [])
@@ -103,7 +107,7 @@ async def run_complete_pipeline():
         # Export files
         exported_files = export_stats.get("exported_files", [])
         if exported_files:
-            print(f"\n📁 Exported Files:")
+            print("\n📁 Exported Files:")
             for file_path in exported_files:
                 print(f"   • {file_path}")
 
@@ -112,7 +116,7 @@ async def run_complete_pipeline():
         # Final verdict
         print("\n🎉 PIPELINE COMPLETED SUCCESSFULLY!")
         print("   All stages executed without errors.")
-        
+
         log_event(
             stage="pipeline",
             block="run_script",
@@ -137,6 +141,7 @@ async def run_complete_pipeline():
         )
         print(f"\n❌ PIPELINE EXECUTION FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

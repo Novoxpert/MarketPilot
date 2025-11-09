@@ -54,7 +54,7 @@ class QualityAssuranceStage(BaseStage):
                             price_value = record_data[price_field]
                             if price_value is not None:
                                 float(price_value)  # Will raise ValueError if invalid
-                                
+
                                 # Check for negative prices
                                 if float(price_value) < 0:
                                     qa_issues.append(f"Negative price in {price_field}")
@@ -98,9 +98,7 @@ class QualityAssuranceStage(BaseStage):
                 validated_records.append(record)
 
         pass_rate = (
-            f"{(qa_passed / len(unique_data) * 100):.1f}%"
-            if unique_data
-            else "0%"
+            f"{(qa_passed / len(unique_data) * 100):.1f}%" if unique_data else "0%"
         )
 
         log_event(

@@ -8,6 +8,7 @@ from typing import Dict, Any
 from marketpilot.utils.logger import log_event
 from marketpilot.config.config_loader import validate_data_columns
 
+
 class BaseAdapter(ABC):
     """Base class for all data adapters"""
 

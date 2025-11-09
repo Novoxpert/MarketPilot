@@ -1,18 +1,12 @@
 """
 ResilientDataFarm - Main orchestrator for all adapters
 Entry point for Market Pilot data ingestion system
-<<<<<<< HEAD
 Updated with full pipeline integration (MP-007)
-=======
->>>>>>> 374b5cf (fix: change folder structure)
 """
 
 from typing import Dict, Any, List
 from pathlib import Path
-<<<<<<< HEAD
 from datetime import datetime
-=======
->>>>>>> 374b5cf (fix: change folder structure)
 from marketpilot.config.config_loader import load_config
 from marketpilot.utils.logger import log_event, setup_logging
 from marketpilot.adapters.base_adapter import BaseAdapter
@@ -20,7 +14,6 @@ from marketpilot.adapters.price_adapter import ResilientPriceAdapter
 from marketpilot.adapters.news_adapter import ResilientNewsAdapter
 from marketpilot.adapters.fundamental_adapter import ResilientFundamentalAdapter
 
-<<<<<<< HEAD
 # Import all pipeline stages
 from marketpilot.data_farm.stages.health_check import HealthCheckStage
 from marketpilot.data_farm.stages.data_collection import DataCollectionStage
@@ -30,13 +23,13 @@ from marketpilot.data_farm.stages.deduplication import DeduplicationStage
 from marketpilot.data_farm.stages.quality_assurance import QualityAssuranceStage
 from marketpilot.data_farm.stages.data_export import DataExportStage
 
-=======
->>>>>>> 374b5cf (fix: change folder structure)
 
 class ResilientDataFarm:
     """Main orchestrator class for Data Farm pipeline"""
 
-    def __init__(self, config_path: str = "src/marketpilot/config/data_farm_config.yaml"):
+    def __init__(
+        self, config_path: str = "src/marketpilot/config/data_farm_config.yaml"
+    ):
         """
         Initialize ResilientDataFarm
 
@@ -55,7 +48,6 @@ class ResilientDataFarm:
         self.config = load_config(config_path)
         self.adapters: List[BaseAdapter] = []
 
-<<<<<<< HEAD
         # Initialize pipeline stages
         self.stages = [
             HealthCheckStage(),
@@ -67,8 +59,6 @@ class ResilientDataFarm:
             DataExportStage(),
         ]
 
-=======
->>>>>>> 374b5cf (fix: change folder structure)
         # Initialize components
         self._initialize_components()
         self._initialize_adapters()
@@ -80,10 +70,7 @@ class ResilientDataFarm:
             msg="ResilientDataFarm initialization complete",
             extra={
                 "adapters_loaded": len(self.adapters),
-<<<<<<< HEAD
                 "stages_loaded": len(self.stages),
-=======
->>>>>>> 374b5cf (fix: change folder structure)
                 "config_loaded": bool(self.config),
             },
         )
@@ -193,7 +180,6 @@ class ResilientDataFarm:
             extra={"total_adapters": len(self.adapters)},
         )
 
-<<<<<<< HEAD
     async def _execute_complete_pipeline(self, symbols: List[str]) -> Dict[str, Any]:
         """
         Execute complete end-to-end pipeline with all stages
@@ -287,8 +273,6 @@ class ResilientDataFarm:
         """
         return await self._execute_complete_pipeline(symbols)
 
-=======
->>>>>>> 374b5cf (fix: change folder structure)
     async def run_smoke_test(self, symbols: List[str]) -> Dict[str, Any]:
         """
         Run smoke test across all adapters for given symbols
@@ -389,8 +373,4 @@ class ResilientDataFarm:
 
     def get_config(self) -> Dict[str, Any]:
         """Get loaded configuration"""
-<<<<<<< HEAD
         return self.config
-=======
-        return self.config
->>>>>>> 374b5cf (fix: change folder structure)

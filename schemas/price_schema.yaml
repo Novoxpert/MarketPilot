@@ -24,7 +24,4 @@ data_types:
   volume: integer
   adjusted_close: float
   split_coefficient: float
-<<<<<<< HEAD
-  dividend_amount: float
-=======
   dividend_amount: float

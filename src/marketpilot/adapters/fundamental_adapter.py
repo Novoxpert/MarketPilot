@@ -1,6 +1,7 @@
 """
 Resilient Fundamental Adapter using Financial Modeling Prep (FMP)
 Inherits schema validation from BaseAdapter
+FIXED: Added timestamp field to result_data
 """
 
 from typing import Dict, Any
@@ -48,27 +49,17 @@ class ResilientFundamentalAdapter(BaseAdapter):
                 "ratios": {"pe_ratio": 28.5, "debt_to_equity": 5.96, "roe": 0.196},
             }
 
-<<<<<<< HEAD
-            # ✅ FIX: Add timestamp field at the data level
             result_data = {
                 "symbol": symbol,
-                "timestamp": datetime.now().isoformat(),  # ✅ Added
-=======
-            result_data = {
-                "symbol": symbol,
->>>>>>> 374b5cf (fix: change folder structure)
+                "timestamp": datetime.now().isoformat(),  # ✅ ADDED THIS LINE
                 "startdate": start_date.isoformat(),
                 "enddate": end_date.isoformat(),
                 "data": mock_fundamentals,
             }
 
-<<<<<<< HEAD
-            self.validate_schema(result_data)
-=======
             # ✅ Validate against schema BEFORE returning
             self.validate_schema(result_data)
 
->>>>>>> 374b5cf (fix: change folder structure)
             self.log_success(symbol, record_count=1)
 
             return {
@@ -82,10 +73,7 @@ class ResilientFundamentalAdapter(BaseAdapter):
             self.log_error(symbol, str(e))
             return {"success": False, "error": str(e), "vendor": self.vendor}
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 374b5cf (fix: change folder structure)
 # Example usage
 if __name__ == "__main__":
     import asyncio
@@ -94,7 +82,7 @@ if __name__ == "__main__":
         "vendor": "fmp",
         "id": "fundamental_fmp_001",
         "cadence": "daily",
-        "schema_type": "fundamental",  # ✅ Added schema type
+        "schema_type": "fundamental",
     }
 
     adapter = ResilientFundamentalAdapter(config)

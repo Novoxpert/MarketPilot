@@ -4,9 +4,9 @@ Run with: pytest tests/test_adapters.py -v
 """
 
 import pytest
-from src.adapters.price_adapter import ResilientPriceAdapter
-from src.adapters.news_adapter import ResilientNewsAdapter
-from src.adapters.fundamental_adapter import ResilientFundamentalAdapter
+from marketpilot.adapters.price_adapter import ResilientPriceAdapter
+from marketpilot.adapters.news_adapter import ResilientNewsAdapter
+from marketpilot.adapters.fundamental_adapter import ResilientFundamentalAdapter
 
 
 @pytest.mark.asyncio
