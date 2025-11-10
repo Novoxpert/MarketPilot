@@ -13,11 +13,6 @@ from marketpilot.utils.log_validator import LogValidator
 async def main():
     """Run pipeline and validate logs"""
 
-    print("=" * 60)
-    print("MP-009: Enhanced Logging Demo")
-    print("=" * 60)
-    print()
-
     # Clean old logs (optional)
     # import shutil
     # if Path("logs").exists():

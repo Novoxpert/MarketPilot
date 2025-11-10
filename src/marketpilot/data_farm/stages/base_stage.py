@@ -38,7 +38,7 @@ class BaseStage(ABC):
         self.operation_id = str(uuid.uuid4())[:8]
         self.start_time = datetime.now()
 
-        # ✅ MP-009: Log stage start with operation_id
+        # Log stage start with operation_id
         log_event(
             stage=self.stage_name,
             block="stage",
@@ -57,10 +57,10 @@ class BaseStage(ABC):
             self.end_time = datetime.now()
             duration_ms = (self.end_time - self.start_time).total_seconds() * 1000
 
-            # ✅ MP-009: Count records processed
+            # Count records processed
             records_processed = self._count_records(result)
 
-            # ✅ MP-009: Log stage completion with metrics
+            # Log stage completion with metrics
             log_event(
                 stage=self.stage_name,
                 block="stage",
@@ -81,7 +81,7 @@ class BaseStage(ABC):
             self.end_time = datetime.now()
             duration_ms = (self.end_time - self.start_time).total_seconds() * 1000
 
-            # ✅ MP-009: Log stage failure with error details
+            # Log stage failure with error details
             log_event(
                 stage=self.stage_name,
                 block="stage",

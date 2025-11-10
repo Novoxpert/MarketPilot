@@ -67,9 +67,19 @@ class TestLoggingEnhancements:
             extra={"error_type": "TestError", "error_message": "Test error"},
         )
 
-        # Check if error log exists
-        error_log = Path("logs/errors")
-        assert error_log.exists(), "Error log directory should exist"
+        # ✅ Check if error log exists at errors/current.jsonl
+        error_log = Path("logs/errors/current.jsonl")
+        assert error_log.exists(), "Error log file should exist at logs/errors/current.jsonl"
+        
+        # ✅ Verify it contains the error
+        with open(error_log, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            assert len(lines) > 0, "Error log should have entries"
+            
+            # Check last entry is our error
+            last_entry = json.loads(lines[-1])
+            assert last_entry["level"] == "ERROR"
+            assert "error_type" in last_entry
 
     def test_adapter_log_routing(self):
         """Test that adapter logs go to correct directory"""
@@ -253,16 +263,17 @@ class TestIntegratedLogging:
     async def test_stage_logging_integration(self):
         """Test that stages log correctly"""
         # Import after potential updates
+        import importlib
         import sys
-
+        
         # Clear cache to get fresh import
-        if "marketpilot.data_farm.stages.health_check" in sys.modules:
-            del sys.modules["marketpilot.data_farm.stages.health_check"]
-        if "marketpilot.data_farm.stages.base_stage" in sys.modules:
-            del sys.modules["marketpilot.data_farm.stages.base_stage"]
-
+        if 'marketpilot.data_farm.stages.health_check' in sys.modules:
+            del sys.modules['marketpilot.data_farm.stages.health_check']
+        if 'marketpilot.data_farm.stages.base_stage' in sys.modules:
+            del sys.modules['marketpilot.data_farm.stages.base_stage']
+        
         from marketpilot.data_farm.stages.health_check import HealthCheckStage
-
+        
         stage = HealthCheckStage()
 
         # Execute stage with mock data
@@ -281,19 +292,19 @@ class TestIntegratedLogging:
         assert len(log_files) > 0, "Stage logs should exist"
 
         # Check if BaseStage has been updated to enhanced version
-        has_enhanced_logging = hasattr(stage, "operation_id")
-
+        has_enhanced_logging = hasattr(stage, 'operation_id')
+        
         if not has_enhanced_logging:
             print("\n⚠️  WARNING: BaseStage has not been updated yet!")
             print("   Stage is using old BaseStage without enhanced logging.")
             print("   Please update src/marketpilot/data_farm/stages/base_stage.py")
             print("   with the enhanced version to enable full MP-009 features.")
-
+            
             # For now, just verify basic logging works
             with open(log_files[0], "r", encoding="utf-8") as f:
                 lines = f.readlines()
                 assert len(lines) > 0, "Should have some log entries"
-
+            
             # Mark test as passed but with warning
             pytest.skip("BaseStage not yet updated - skipping enhanced logging check")
             return
@@ -302,32 +313,30 @@ class TestIntegratedLogging:
         completion_log_found = False
         with open(log_files[0], "r", encoding="utf-8") as f:
             lines = f.readlines()
-
+            
             # Look for completion log (last few lines)
             for line in reversed(lines[-10:]):  # Check last 10 lines
                 try:
                     entry = json.loads(line)
-
+                    
                     # Check if this is a completion log for health_check
-                    if entry.get(
-                        "stage"
-                    ) == "health_check" and "Completed" in entry.get("message", ""):
+                    if (entry.get("stage") == "health_check" and 
+                        "Completed" in entry.get("message", "")):
+                        
                         # Verify it has the enhanced logging fields
                         extra = entry.get("extra", {})
-
+                        
                         # Check for operation_id, duration_ms, success_flag
-                        if (
-                            "operation_id" in extra
-                            and "duration_ms" in extra
-                            and "success_flag" in extra
-                        ):
+                        if ("operation_id" in extra and 
+                            "duration_ms" in extra and 
+                            "success_flag" in extra):
                             completion_log_found = True
                             print("\n✅ Enhanced logging verified!")
                             break
-
+                            
                 except json.JSONDecodeError:
                     continue
-
+        
         assert completion_log_found, "Completion log with enhanced fields not found"
 
 

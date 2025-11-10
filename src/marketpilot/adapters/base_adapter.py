@@ -52,7 +52,7 @@ class BaseAdapter(ABC):
         operation_id = str(uuid.uuid4())[:8]
         start_time = datetime.now()
 
-        # ✅ MP-009: Log ingestion start
+        # Log ingestion start
         log_event(
             stage="ingestion",
             block=f"{self.vendor}_adapter",
@@ -73,7 +73,7 @@ class BaseAdapter(ABC):
             end_time = datetime.now()
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
-            # ✅ MP-009: Log successful ingestion with metrics
+            # Log successful ingestion with metrics
             record_count = 1 if result.get("success") else 0
 
             log_event(
@@ -98,7 +98,7 @@ class BaseAdapter(ABC):
             end_time = datetime.now()
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
-            # ✅ MP-009: Log ingestion failure
+            # Log ingestion failure
             log_event(
                 stage="ingestion",
                 block=f"{self.vendor}_adapter",
