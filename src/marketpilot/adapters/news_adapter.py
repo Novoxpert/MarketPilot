@@ -10,7 +10,7 @@ from marketpilot.adapters.base_adapter import BaseAdapter
 class ResilientNewsAdapter(BaseAdapter):
     """News data adapter using AlphaVantage"""
 
-    async def execute_ingest(self, symbol: str) -> Dict[str, Any]:
+    async def _execute_ingest_internal(self, symbol: str) -> Dict[str, Any]:
         """Ingest news data for a symbol"""
         try:
             end_date = datetime.now()
@@ -64,7 +64,7 @@ Fixed Fundamental Adapter - Adds timestamp field to data payload
 class ResilientFundamentalAdapter(BaseAdapter):
     """Fundamental data adapter using FMP"""
 
-    async def execute_ingest(self, symbol: str) -> Dict[str, Any]:
+    async def _execute_ingest_internal(self, symbol: str) -> Dict[str, Any]:
         """Ingest fundamental data for a symbol"""
         try:
             end_date = datetime.now()

@@ -3,8 +3,10 @@
 .env.local
 
 # Python
+
 __pycache__/
 *.py[cod]
+*.pyc
 *$py.class
 *.so
 .Python
@@ -53,6 +55,7 @@ htmlcov/
 dmypy.json
 
 # Logs
+logs_test/
 logs/
 *.log
 
@@ -80,3 +83,7 @@ data/
 .vscode
 
 .history
+
+# output
+data/
+data_test/

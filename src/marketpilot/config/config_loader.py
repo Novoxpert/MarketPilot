@@ -56,7 +56,7 @@ def load_schema(schema_type: str) -> Dict[str, Any]:
     Returns:
         Schema dictionary
     """
-    schema_path = Path(f"schemas/{schema_type}_schema.yaml")
+    schema_path = Path(f"src/marketpilot/schemas/{schema_type}_schema.yaml")
 
     if not schema_path.exists():
         raise ConfigError(f"Schema not found: {schema_path}")

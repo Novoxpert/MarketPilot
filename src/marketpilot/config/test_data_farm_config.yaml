@@ -1,0 +1,48 @@
+# Test Configuration for Data Farm
+# This config is used automatically when MARKETPILOT_MODE=test
+
+# Logging configuration
+logging:
+  level: DEBUG  # More verbose in test mode
+  format: json
+
+# Output configuration
+output:
+  base_dir: data_test/output  # Isolated test output
+  format: json
+  compression: none
+
+# Adapters configuration (minimal for testing)
+adapters:
+  - type: price
+    vendor: yfinance
+    id: price_yfinance_test_001
+    cadence: 1min
+    schema_type: price
+    enabled: true
+
+  - type: news
+    vendor: alphavantage
+    id: news_alphavantage_test_001
+    cadence: daily
+    schema_type: news
+    enabled: true
+
+  - type: fundamental
+    vendor: fmp
+    id: fundamental_fmp_test_001
+    cadence: daily
+    schema_type: fundamental
+    enabled: true
+
+# Quality thresholds (relaxed for testing)
+quality:
+  min_completeness: 0.5  # 50% (vs 95% in normal mode)
+  max_nan_ratio: 0.5     # 50% (vs 5% in normal mode)
+  enable_validation: true
+
+# Test-specific settings
+test:
+  mock_api_calls: true
+  fast_mode: true
+  cleanup_on_exit: true

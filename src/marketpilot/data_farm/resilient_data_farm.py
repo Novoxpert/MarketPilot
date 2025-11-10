@@ -1,5 +1,5 @@
 """
-ResilientDataFarm - Updated with Schema Validation (MP-008)
+ResilientDataFarm - Updated with Schema Validation
 Added automatic validation after pipeline execution
 """
 
@@ -22,7 +22,7 @@ from marketpilot.data_farm.stages.deduplication import DeduplicationStage
 from marketpilot.data_farm.stages.quality_assurance import QualityAssuranceStage
 from marketpilot.data_farm.stages.data_export import DataExportStage
 
-# ✅ NEW: Import schema validator (MP-008)
+# ✅ NEW: Import schema validator
 from marketpilot.utils.schema_validator import validate_pipeline_stages
 
 
@@ -224,7 +224,7 @@ class ResilientDataFarm:
                 # Execute stage
                 pipeline_data = await stage.execute(pipeline_data)
 
-            # ✅ NEW: Validate pipeline schema consistency (MP-008)
+            # ✅ NEW: Validate pipeline schema consistency
             log_event(
                 stage="pipeline",
                 block="validation",

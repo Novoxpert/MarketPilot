@@ -1,188 +1,248 @@
-"""Story MP-003
-Unit tests for centralized logging system
-Run with: pytest tests/test_logger.py
+"""
+Unit Tests for Logger - Updated for Mode-Aware Logger
 """
 
-import json
 import pytest
+import json
 from datetime import datetime
-from marketpilot.utils.logger import log_event, setup_logging, LOG_DIRS
+from marketpilot.utils.logger import log_event  # ✅ حذف setup_logging
+from marketpilot.utils.mode_manager import get_mode_manager
 
 
-@pytest.fixture
-def clean_logs():
-    """Clean up log files before and after tests"""
-    # Setup: create directories
-    for log_dir in LOG_DIRS.values():
-        log_dir.mkdir(parents=True, exist_ok=True)
+class TestLogger:
+    """Test logging functionality"""
 
-    yield
+    def test_log_directory_creation(self):
+        """Test that log directories are created"""
+        # ✅ حذف setup_logging() - conftest.py اینو انجام میده
 
-    # Teardown: clean test logs (optional, comment out to inspect logs)
-    # for log_dir in LOG_DIRS.values():
-    #     for log_file in log_dir.glob("*.jsonl"):
-    #         log_file.unlink()
+        manager = get_mode_manager()
+        log_base = manager.get_log_dir()
 
+        # Check that base directories exist
+        assert (log_base / "pipeline").exists()
+        assert (log_base / "stages").exists()
+        assert (log_base / "adapters").exists()
+        assert (log_base / "errors").exists()
 
-def test_log_directories_created(clean_logs):
-    """Test that log directories are created"""
-    setup_logging()
+    def test_log_event_writes_to_file(self):
+        """Test that log events are written to files"""
+        # ✅ حذف setup_logging()
 
-    for log_dir in LOG_DIRS.values():
-        assert log_dir.exists(), f"Log directory {log_dir} was not created"
-
-
-def test_adapter_log_written(clean_logs):
-    """Test adapter logs are written to correct directory"""
-    setup_logging()
-
-    log_event(
-        stage="ingestion",
-        block="alphavantage_adapter",
-        level="INFO",
-        msg="Test adapter log",
-        extra={"symbol": "AAPL"},
-    )
-
-    # Check that log file exists
-    adapter_logs = list(LOG_DIRS["adapters"].glob("*.jsonl"))
-    assert len(adapter_logs) > 0, "No adapter log files created"
-
-    # Read and verify log content
-    with open(adapter_logs[0], "r") as f:
-        lines = f.readlines()
-        assert len(lines) > 0, "Log file is empty"
-
-        log_entry = json.loads(lines[-1])
-        assert log_entry["stage"] == "ingestion"
-        assert log_entry["block"] == "alphavantage_adapter"
-        assert log_entry["level"] == "INFO"
-        assert log_entry["message"] == "Test adapter log"
-        assert log_entry["symbol"] == "AAPL"
-        assert "timestamp" in log_entry
-
-
-def test_stage_log_written(clean_logs):
-    """Test stage logs are written to correct directory"""
-    setup_logging()
-
-    log_event(
-        stage="quality",
-        block="price_validator_stage",
-        level="WARNING",
-        msg="Test stage log",
-        extra={"warnings": 3},
-    )
-
-    # Check that log file exists
-    stage_logs = list(LOG_DIRS["stages"].glob("*.jsonl"))
-    assert len(stage_logs) > 0, "No stage log files created"
-
-    # Verify log content
-    with open(stage_logs[0], "r") as f:
-        lines = f.readlines()
-        log_entry = json.loads(lines[-1])
-        assert log_entry["stage"] == "quality"
-        assert log_entry["level"] == "WARNING"
-
-
-def test_error_log_written(clean_logs):
-    """Test error logs are written to errors directory"""
-    setup_logging()
-
-    log_event(
-        stage="ingestion",
-        block="fmp_adapter",
-        level="ERROR",
-        msg="Test error log",
-        extra={"error_code": 500},
-    )
-
-    # Check that log file exists in errors directory
-    error_logs = list(LOG_DIRS["errors"].glob("*.jsonl"))
-    assert len(error_logs) > 0, "No error log files created"
-
-    # Verify log content
-    with open(error_logs[0], "r") as f:
-        lines = f.readlines()
-        log_entry = json.loads(lines[-1])
-        assert log_entry["level"] == "ERROR"
-        assert log_entry["error_code"] == 500
-
-
-def test_jsonl_format_parsable(clean_logs):
-    """Test that all log entries are valid JSON"""
-    setup_logging()
-
-    # Write multiple log entries
-    for i in range(5):
         log_event(
             stage="test",
-            block="test_component",
+            block="test_block",
             level="INFO",
-            msg=f"Test message {i}",
-            extra={"iteration": i},
+            msg="Test message",
+            extra={"test_field": "test_value"},
         )
 
-    # Read and parse all lines
-    pipeline_logs = list(LOG_DIRS["pipeline"].glob("*.jsonl"))
-    assert len(pipeline_logs) > 0
+        # Check that log file exists
+        manager = get_mode_manager()
+        log_base = manager.get_log_dir()
+        log_files = list(log_base.rglob("*.jsonl"))
 
-    with open(pipeline_logs[0], "r") as f:
-        for line in f:
-            # Should not raise exception
-            log_entry = json.loads(line.strip())
-            assert "timestamp" in log_entry
-            assert "stage" in log_entry
-            assert "block" in log_entry
-            assert "level" in log_entry
-            assert "message" in log_entry
+        assert len(log_files) > 0, "At least one log file should exist"
 
+    def test_log_entry_format(self):
+        """Test that log entries have correct format"""
+        # Use unique message to find our entry
+        test_msg = f"Test message at {datetime.now().isoformat()}"
 
-def test_log_rotation_by_date(clean_logs):
-    """Test that logs use date-based file names"""
-    setup_logging()
+        # ✅ حذف setup_logging()
 
-    log_event("test", "test_block", "INFO", "Test message")
+        log_event(
+            stage="test_format",
+            block="test_block",
+            level="INFO",
+            msg=test_msg,
+            extra={"custom_field": "custom_value"},
+        )
 
-    today = datetime.now().strftime("%Y%m%d")
+        # Find and read log file
+        manager = get_mode_manager()
+        log_base = manager.get_log_dir()
+        log_files = list(log_base.rglob("*.jsonl"))
 
-    # Check that filename contains today's date
-    for log_dir in LOG_DIRS.values():
-        log_files = list(log_dir.glob("*.jsonl"))
-        if log_files:
-            for log_file in log_files:
-                assert (
-                    today in log_file.name
-                ), f"Log file {log_file.name} doesn't contain date"
+        assert len(log_files) > 0
 
+        # Find our entry
+        found = False
+        for log_file in log_files:
+            with open(log_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    entry = json.loads(line)
+                    if entry.get("message") == test_msg:
+                        # Check required fields
+                        assert "timestamp" in entry
+                        assert "stage" in entry
+                        assert "block" in entry
+                        assert "level" in entry
+                        assert "message" in entry
+                        assert "custom_field" in entry
+                        assert entry["custom_field"] == "custom_value"
+                        found = True
+                        break
+            if found:
+                break
 
-def test_extra_fields_preserved(clean_logs):
-    """Test that extra fields are correctly added to logs"""
-    setup_logging()
+        assert found, f"Could not find log entry with message: {test_msg}"
 
-    extra_data = {
-        "symbol": "AAPL",
-        "records": 100,
-        "api_version": "v2",
-        "response_time": 1.23,
-    }
+    def test_error_log_routing(self):
+        """Test that errors go to errors directory"""
+        # ✅ حذف setup_logging()
 
-    log_event(
-        stage="ingestion",
-        block="test_adapter",
-        level="INFO",
-        msg="Test with extra fields",
-        extra=extra_data,
-    )
+        log_event(
+            stage="test",
+            block="test_block",
+            level="ERROR",
+            msg="Test error",
+            extra={"error_type": "TestError"},
+        )
 
-    adapter_logs = list(LOG_DIRS["adapters"].glob("*.jsonl"))
-    with open(adapter_logs[0], "r") as f:
-        lines = f.readlines()
-        log_entry = json.loads(lines[-1])
+        # Check errors directory
+        manager = get_mode_manager()
+        error_log = manager.get_log_dir() / "errors" / "current.jsonl"
 
-        for key, value in extra_data.items():
-            assert log_entry[key] == value, f"Extra field {key} not preserved correctly"
+        assert error_log.exists(), "Error log should exist"
+
+        # Verify content
+        with open(error_log, "r") as f:
+            lines = f.readlines()
+            # Find an error entry
+            found_error = False
+            for line in lines:
+                entry = json.loads(line)
+                if entry.get("level") == "ERROR":
+                    found_error = True
+                    break
+            assert found_error, "Should have at least one ERROR entry"
+
+    def test_adapter_log_routing(self):
+        """Test that adapter logs go to adapters directory"""
+        # ✅ حذف setup_logging()
+
+        log_event(
+            stage="ingestion",
+            block="yfinance_adapter",
+            level="INFO",
+            msg="Test adapter log",
+        )
+
+        # Check adapters directory
+        manager = get_mode_manager()
+        adapter_dir = manager.get_log_dir() / "adapters"
+
+        assert adapter_dir.exists()
+        log_files = list(adapter_dir.glob("*.jsonl"))
+        assert len(log_files) > 0
+
+    def test_stage_log_routing(self):
+        """Test that stage logs go to stages directory"""
+        # ✅ حذف setup_logging()
+
+        log_event(
+            stage="data_collection", block="stage", level="INFO", msg="Test stage log"
+        )
+
+        # Check stages directory
+        manager = get_mode_manager()
+        stage_dir = manager.get_log_dir() / "stages"
+
+        assert stage_dir.exists()
+        log_files = list(stage_dir.glob("*.jsonl"))
+        assert len(log_files) > 0
+
+    def test_log_levels(self):
+        """Test different log levels"""
+        # ✅ حذف setup_logging("DEBUG")
+        # Note: Log level is set to INFO in conftest.py
+        # If you need DEBUG level, you can still log DEBUG messages
+
+        levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+        for level in levels:
+            log_event(
+                stage="test",
+                block="test_block",
+                level=level,
+                msg=f"Test {level} message",
+            )
+
+        # Verify at least one log file exists
+        manager = get_mode_manager()
+        log_files = list(manager.get_log_dir().rglob("*.jsonl"))
+        assert len(log_files) > 0
+
+    def test_extra_fields_in_logs(self):
+        """Test that extra fields are preserved"""
+        # Use unique message to find our entry
+        test_msg = f"Test with extra data at {datetime.now().isoformat()}"
+
+        # ✅ حذف setup_logging()
+
+        extra_data = {"symbol": "AAPL", "price": 150.0, "volume": 1000000}
+
+        log_event(
+            stage="test_extra",
+            block="test_extra_block",
+            level="INFO",
+            msg=test_msg,
+            extra=extra_data,
+        )
+
+        # Read log and verify
+        manager = get_mode_manager()
+        log_files = list(manager.get_log_dir().rglob("*.jsonl"))
+
+        # Find our entry
+        found = False
+        for log_file in log_files:
+            with open(log_file, "r") as f:
+                for line in f:
+                    entry = json.loads(line)
+                    if entry.get("message") == test_msg:
+                        # Verify extra fields
+                        for key, value in extra_data.items():
+                            assert key in entry, f"Field {key} not found in log entry"
+                            assert entry[key] == value, f"Field {key} value mismatch"
+                        found = True
+                        break
+            if found:
+                break
+
+        assert found, f"Could not find log entry with message: {test_msg}"
+
+    def test_test_mode_indicator(self):
+        """Test that test mode adds indicator to logs"""
+        # ✅ حذف set_test_mode() - conftest.py already did this
+        # ✅ حذف setup_logging()
+
+        manager = get_mode_manager()
+        test_msg = f"Test mode message at {datetime.now().isoformat()}"
+
+        log_event(
+            stage="test_mode_check", block="test_block", level="INFO", msg=test_msg
+        )
+
+        # Read log and check for test_mode field
+        log_files = list(manager.get_log_dir().rglob("*.jsonl"))
+
+        found = False
+        for log_file in log_files:
+            with open(log_file, "r") as f:
+                for line in f:
+                    entry = json.loads(line)
+                    if entry.get("message") == test_msg:
+                        if manager.is_test_mode:
+                            assert "test_mode" in entry
+                            assert entry["test_mode"] is True
+                        found = True
+                        break
+            if found:
+                break
+
+        assert found, f"Could not find log entry with message: {test_msg}"
 
 
 if __name__ == "__main__":
