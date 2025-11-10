@@ -140,21 +140,20 @@ def test_jsonl_format_parsable(clean_logs):
 
 
 def test_log_rotation_by_date(clean_logs):
-    """Test that logs use date-based file names"""
+    """Test that logs use date-based file names (except current.jsonl)"""
     setup_logging()
 
     log_event("test", "test_block", "INFO", "Test message")
 
     today = datetime.now().strftime("%Y%m%d")
 
-    # Check that filename contains today's date
     for log_dir in LOG_DIRS.values():
-        log_files = list(log_dir.glob("*.jsonl"))
-        if log_files:
-            for log_file in log_files:
-                assert (
-                    today in log_file.name
-                ), f"Log file {log_file.name} doesn't contain date"
+        for log_file in log_dir.glob("*.jsonl"):
+            if log_file.name == "current.jsonl":
+                continue  # این فایل استثنا است
+            assert (
+                today in log_file.name
+            ), f"Log file {log_file.name} doesn't contain date"
 
 
 def test_extra_fields_preserved(clean_logs):

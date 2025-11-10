@@ -2,6 +2,7 @@
 JSONL Log Validator
 Validates that log files are properly formatted and contain required fields
 Includes JSON schema validation
+Includes JSON schema validation
 """
 
 import json
@@ -30,30 +31,18 @@ class LogValidator:
             "timestamp": {
                 "type": "string",
                 "format": "date-time",
-                "description": "ISO 8601 timestamp"
+                "description": "ISO 8601 timestamp",
             },
-            "stage": {
-                "type": "string",
-                "description": "Pipeline stage name"
-            },
-            "block": {
-                "type": "string",
-                "description": "Component block name"
-            },
+            "stage": {"type": "string", "description": "Pipeline stage name"},
+            "block": {"type": "string", "description": "Component block name"},
             "level": {
                 "type": "string",
                 "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-                "description": "Log level"
+                "description": "Log level",
             },
-            "message": {
-                "type": "string",
-                "description": "Log message"
-            },
-            "extra": {
-                "type": "object",
-                "description": "Additional fields"
-            }
-        }
+            "message": {"type": "string", "description": "Log message"},
+            "extra": {"type": "object", "description": "Additional fields"},
+        },
     }
 
     # ✅ Schema for error logs
@@ -70,50 +59,60 @@ class LogValidator:
             "error_message": {"type": "string"},
             "operation_id": {"type": "string"},
             "success_flag": {"type": "boolean", "enum": [False]},
-        }
+        },
     }
 
     @staticmethod
-    def validate_against_schema(entry: Dict[str, Any], schema: Dict[str, Any]) -> List[str]:
+    def validate_against_schema(
+        entry: Dict[str, Any], schema: Dict[str, Any]
+    ) -> List[str]:
         """
         Validate entry against JSON schema
-        
+
         Args:
             entry: Log entry to validate
             schema: JSON schema
-            
+
         Returns:
             List of validation errors
         """
         errors = []
-        
+
         # Check required fields
         required = schema.get("required", [])
         for field in required:
             if field not in entry:
                 errors.append(f"Missing required field: {field}")
-        
+
         # Check field types and values
         properties = schema.get("properties", {})
         for field, rules in properties.items():
             if field in entry:
                 value = entry[field]
-                
+
                 # Check type
                 if "type" in rules:
                     expected_type = rules["type"]
                     if expected_type == "string" and not isinstance(value, str):
-                        errors.append(f"Field '{field}' should be string, got {type(value).__name__}")
+                        errors.append(
+                            f"Field '{field}' should be string, got {type(value).__name__}"
+                        )
                     elif expected_type == "object" and not isinstance(value, dict):
-                        errors.append(f"Field '{field}' should be object, got {type(value).__name__}")
+                        errors.append(
+                            f"Field '{field}' should be object, got {type(value).__name__}"
+                        )
                     elif expected_type == "boolean" and not isinstance(value, bool):
-                        errors.append(f"Field '{field}' should be boolean, got {type(value).__name__}")
-                
+                        errors.append(
+                            f"Field '{field}' should be boolean, got {type(value).__name__}"
+                        )
+
                 # Check enum
                 if "enum" in rules:
                     if value not in rules["enum"]:
-                        errors.append(f"Field '{field}' value '{value}' not in allowed values: {rules['enum']}")
-        
+                        errors.append(
+                            f"Field '{field}' value '{value}' not in allowed values: {rules['enum']}"
+                        )
+
         return errors
 
     @staticmethod

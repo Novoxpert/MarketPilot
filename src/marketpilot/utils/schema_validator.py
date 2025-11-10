@@ -1,5 +1,5 @@
 """
-Schema Validator - MP-008: Validate inter-stage data transfer
+Schema Validator : Validate inter-stage data transfer
 Simple validator to check schema consistency between pipeline stages
 """
 

@@ -3,8 +3,10 @@
 .env.local
 
 # Python
+
 __pycache__/
 *.py[cod]
+*.pyc
 *$py.class
 *.so
 .Python
@@ -71,10 +73,5 @@ logs/
 Thumbs.db
 .DS_Store
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-data/
-.vscode
+# output
+data/output

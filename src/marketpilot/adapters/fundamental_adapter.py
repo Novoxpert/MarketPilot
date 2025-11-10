@@ -12,7 +12,7 @@ from marketpilot.adapters.base_adapter import BaseAdapter
 class ResilientFundamentalAdapter(BaseAdapter):
     """Fundamental data adapter using FMP"""
 
-    async def execute_ingest(self, symbol: str) -> Dict[str, Any]:
+    async def _execute_ingest_internal(self, symbol: str) -> Dict[str, Any]:
         """
         Ingest fundamental data for a symbol
 
