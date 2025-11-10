@@ -266,10 +266,16 @@ class TestIntegratedLogging:
         stage = HealthCheckStage()
 
         # Execute stage with mock data
-        # data = {"adapters": [], "symbols": ["AAPL"]}
+        data = {"adapters": [], "symbols": ["AAPL"]}
 
-        # result = await stage.execute(data)
-
+        result = await stage.execute(data)
+        # use result so it's not an unused variable — also gives the test some value checks
+        assert isinstance(result, dict)
+        # health_check stage should have added a 'health_check' key
+        assert "health_check" in result
+        # quick sanity: total_adapters should be an int (0 here because adapters list is empty)
+        hc = result.get("health_check", {})
+        assert isinstance(hc.get("total_adapters", 0), int)
         # Verify stage logged correctly
         log_files = list(Path("logs/stages").rglob("*.jsonl"))
         assert len(log_files) > 0, "Stage logs should exist"
