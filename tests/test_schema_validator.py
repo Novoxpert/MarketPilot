@@ -1,5 +1,5 @@
 """
-Unit Tests for Schema Validator - MP-008
+Unit Tests for Schema Validator
 """
 
 import pytest

@@ -2,6 +2,7 @@
 JSONL Log Validator
 Validates that log files are properly formatted and contain required fields
 Includes JSON schema validation
+Includes JSON schema validation
 """
 
 import json
@@ -17,7 +18,11 @@ class LogValidator:
     REQUIRED_FIELDS = ["timestamp", "stage", "block", "level", "message"]
 
     # Required fields for stage/adapter logs
-    STAGE_REQUIRED_FIELDS = REQUIRED_FIELDS + ["operation_id", "duration_ms", "success_flag"]
+    STAGE_REQUIRED_FIELDS = REQUIRED_FIELDS + [
+        "operation_id",
+        "duration_ms",
+        "success_flag",
+    ]
 
     # Valid log levels
     VALID_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -30,30 +35,18 @@ class LogValidator:
             "timestamp": {
                 "type": "string",
                 "format": "date-time",
-                "description": "ISO 8601 timestamp"
+                "description": "ISO 8601 timestamp",
             },
-            "stage": {
-                "type": "string",
-                "description": "Pipeline stage name"
-            },
-            "block": {
-                "type": "string",
-                "description": "Component block name"
-            },
+            "stage": {"type": "string", "description": "Pipeline stage name"},
+            "block": {"type": "string", "description": "Component block name"},
             "level": {
                 "type": "string",
                 "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-                "description": "Log level"
+                "description": "Log level",
             },
-            "message": {
-                "type": "string",
-                "description": "Log message"
-            },
-            "extra": {
-                "type": "object",
-                "description": "Additional fields"
-            }
-        }
+            "message": {"type": "string", "description": "Log message"},
+            "extra": {"type": "object", "description": "Additional fields"},
+        },
     }
 
     # ✅ Schema for error logs
@@ -70,50 +63,60 @@ class LogValidator:
             "error_message": {"type": "string"},
             "operation_id": {"type": "string"},
             "success_flag": {"type": "boolean", "enum": [False]},
-        }
+        },
     }
 
     @staticmethod
-    def validate_against_schema(entry: Dict[str, Any], schema: Dict[str, Any]) -> List[str]:
+    def validate_against_schema(
+        entry: Dict[str, Any], schema: Dict[str, Any]
+    ) -> List[str]:
         """
         Validate entry against JSON schema
-        
+
         Args:
             entry: Log entry to validate
             schema: JSON schema
-            
+
         Returns:
             List of validation errors
         """
         errors = []
-        
+
         # Check required fields
         required = schema.get("required", [])
         for field in required:
             if field not in entry:
                 errors.append(f"Missing required field: {field}")
-        
+
         # Check field types and values
         properties = schema.get("properties", {})
         for field, rules in properties.items():
             if field in entry:
                 value = entry[field]
-                
+
                 # Check type
                 if "type" in rules:
                     expected_type = rules["type"]
                     if expected_type == "string" and not isinstance(value, str):
-                        errors.append(f"Field '{field}' should be string, got {type(value).__name__}")
+                        errors.append(
+                            f"Field '{field}' should be string, got {type(value).__name__}"
+                        )
                     elif expected_type == "object" and not isinstance(value, dict):
-                        errors.append(f"Field '{field}' should be object, got {type(value).__name__}")
+                        errors.append(
+                            f"Field '{field}' should be object, got {type(value).__name__}"
+                        )
                     elif expected_type == "boolean" and not isinstance(value, bool):
-                        errors.append(f"Field '{field}' should be boolean, got {type(value).__name__}")
-                
+                        errors.append(
+                            f"Field '{field}' should be boolean, got {type(value).__name__}"
+                        )
+
                 # Check enum
                 if "enum" in rules:
                     if value not in rules["enum"]:
-                        errors.append(f"Field '{field}' value '{value}' not in allowed values: {rules['enum']}")
-        
+                        errors.append(
+                            f"Field '{field}' value '{value}' not in allowed values: {rules['enum']}"
+                        )
+
         return errors
 
     @staticmethod
@@ -158,7 +161,9 @@ class LogValidator:
                         report["total_entries"] += 1
 
                         # Validate entry structure
-                        validation_result = LogValidator._validate_entry(entry, line_num)
+                        validation_result = LogValidator._validate_entry(
+                            entry, line_num
+                        )
 
                         if validation_result["missing_fields"]:
                             report["missing_fields"].append(
@@ -233,7 +238,9 @@ class LogValidator:
         missing = []
 
         # Check if this is a completion log (should have metrics)
-        if "Completed" in entry.get("message", "") or "Failed" in entry.get("message", ""):
+        if "Completed" in entry.get("message", "") or "Failed" in entry.get(
+            "message", ""
+        ):
             for field in ["operation_id", "duration_ms", "success_flag"]:
                 if field not in entry.get("extra", {}):
                     missing.append(field)
@@ -320,13 +327,19 @@ class LogValidator:
                     print(f"  File: {file_report['file']}")
 
                     if file_report["malformed_entries"]:
-                        print(f"    Malformed entries: {len(file_report['malformed_entries'])}")
+                        print(
+                            f"    Malformed entries: {len(file_report['malformed_entries'])}"
+                        )
 
                     if file_report["missing_fields"]:
-                        print(f"    Missing fields: {len(file_report['missing_fields'])}")
+                        print(
+                            f"    Missing fields: {len(file_report['missing_fields'])}"
+                        )
 
                     if file_report["invalid_levels"]:
-                        print(f"    Invalid levels: {len(file_report['invalid_levels'])}")
+                        print(
+                            f"    Invalid levels: {len(file_report['invalid_levels'])}"
+                        )
 
                     print()
 

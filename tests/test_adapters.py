@@ -105,8 +105,8 @@ async def test_all_adapters_run_independently():
 
 @pytest.mark.asyncio
 async def test_adapter_logs_to_correct_directory():
-    """Test that adapters log to /logs/adapters/"""
-    from pathlib import Path
+    """Test that adapters log to correct directory (mode-aware)"""
+    from marketpilot.utils.mode_manager import get_mode_manager
 
     config = {
         "vendor": "yfinance",
@@ -118,16 +118,18 @@ async def test_adapter_logs_to_correct_directory():
 
     _ = await adapter.execute_ingest("AAPL")
 
-    log_dir = Path("logs/adapters")
+    # Use mode-aware log directory
+    manager = get_mode_manager()
+    log_dir = manager.get_log_dir() / "adapters"
     log_files = list(log_dir.glob("*.jsonl"))
 
-    assert len(log_files) > 0, "No adapter log files found"
+    assert len(log_files) > 0, f"No adapter log files found in {log_dir}"
 
 
 @pytest.mark.asyncio
 async def test_schema_validation_happens():
     """Test that schema validation is performed"""
-    from pathlib import Path
+    from marketpilot.utils.mode_manager import get_mode_manager
 
     config = {
         "vendor": "yfinance",
@@ -139,7 +141,9 @@ async def test_schema_validation_happens():
     adapter = ResilientPriceAdapter(config)
     _ = await adapter.execute_ingest("AAPL")
 
-    log_dir = Path("logs/adapters")
+    # Use mode-aware log directory
+    manager = get_mode_manager()
+    log_dir = manager.get_log_dir() / "adapters"
     log_files = list(log_dir.glob("*.jsonl"))
 
     validation_logged = False
@@ -149,6 +153,8 @@ async def test_schema_validation_happens():
                 if "Schema validation passed" in line:
                     validation_logged = True
                     break
+        if validation_logged:
+            break
 
     assert validation_logged, "Schema validation was not logged"
 
