@@ -77,3 +77,4 @@ __pycache__/
 *$py.class
 
 data/
+.vscode
