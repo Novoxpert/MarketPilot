@@ -138,7 +138,7 @@ poetry run pytest tests/test_schema_validator.py -v
 
 Manual pipeline validation:
 ```bash
-python scripts/validate_pipeline.py --config config/data_farm_config.yaml
+python scripts/validate_pipeline.py --config marketpilot/configs/data_farm_config.yaml
 
 ```
 

@@ -5,7 +5,7 @@ Simple validator to check schema consistency between pipeline stages
 
 from typing import Dict, Any, List, Set
 from marketpilot.utils.logger import log_event
-from marketpilot.config.config_loader import get_required_columns
+from marketpilot.utils.config_loader import get_required_columns
 
 
 class SchemaValidator:

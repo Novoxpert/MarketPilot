@@ -49,7 +49,6 @@ def _create_log_dirs():
 
 
 def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
-def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
     """
     Get log file path for a category
 
@@ -178,15 +177,12 @@ def setup_logging(log_level: str = "INFO"):
     _create_log_dirs()
 
     # Configure Python's logging module
-    # Configure Python's logging module
     logging.basicConfig(
-        level=LOG_LEVELS.get(log_level.upper(), logging.INFO),
         level=LOG_LEVELS.get(log_level.upper(), logging.INFO),
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
     log_event(
-        "system",
         "system",
         "logger",
         "INFO",

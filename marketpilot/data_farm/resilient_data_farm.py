@@ -6,7 +6,7 @@ Added automatic validation after pipeline execution
 from typing import Dict, Any, List
 from pathlib import Path
 from datetime import datetime
-from marketpilot.config.config_loader import load_config
+from marketpilot.utils.config_loader import load_config
 from marketpilot.utils.logger import log_event, setup_logging
 from marketpilot.adapters.base_adapter import BaseAdapter
 from marketpilot.adapters.price_adapter import ResilientPriceAdapter
@@ -30,7 +30,7 @@ class ResilientDataFarm:
     """Main orchestrator class for Data Farm pipeline with validation"""
 
     def __init__(
-        self, config_path: str = "src/marketpilot/config/data_farm_config.yaml"
+        self, config_path: str = "marketpilot/configs/data_farm_config.yaml"
     ):
         """
         Initialize ResilientDataFarm

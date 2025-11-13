@@ -4,11 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Elham Nikbakht Bidgoli <nikbakht.enb4@gmail.com>"]
 readme = "README.md"
-packages = [
-    { include = "marketpilot", from = "src" },
-    { include = "schemas" },
-    { include = "example" },
-]
+packages = [{ include = "marketpilot", from = "." }]
 
 [tool.poetry.dependencies]
 python = "^3.11"

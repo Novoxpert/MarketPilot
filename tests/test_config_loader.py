@@ -1,7 +1,7 @@
 """Story MP-002 Tests for config loader"""
 
 import pytest
-from marketpilot.config.config_loader import (
+from marketpilot.utils.config_loader import (
     load_schema,
     validate_data_columns,
     get_required_columns,

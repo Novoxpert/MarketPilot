@@ -8,7 +8,7 @@ from typing import Dict, Any
 from datetime import datetime
 import uuid
 from marketpilot.utils.logger import log_event
-from marketpilot.config.config_loader import validate_data_columns
+from marketpilot.utils.config_loader import validate_data_columns
 
 
 class BaseAdapter(ABC):
