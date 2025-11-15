@@ -58,7 +58,7 @@ def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
     log_base = _get_log_base_dir()
     log_dir = log_base / category
 
-    #  Error logs always go to current.jsonl
+    # Error logs always go to current.jsonl
     if category == "errors":
         return log_dir / "current.jsonl"
 
