@@ -1,5 +1,7 @@
 """
 Unit Tests for Enhanced Logging
+✅ Now mode-aware - works in both test and normal mode
+✅ No duplicate setup_logging calls
 """
 
 import pytest
