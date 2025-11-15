@@ -1,6 +1,7 @@
 """
-Simple unit tests for pipeline stages (MP-007)
+Simple unit tests for pipeline stages
 Basic tests to verify stage functionality
+✅ Now properly uses test mode and logs_test/ directory
 """
 
 import asyncio
@@ -8,6 +9,7 @@ from marketpilot.data_farm.stages.health_check import HealthCheckStage
 from marketpilot.data_farm.stages.data_collection import DataCollectionStage
 from marketpilot.data_farm.stages.nan_processing import NaNProcessingStage
 from marketpilot.data_farm.stages.deduplication import DeduplicationStage
+from marketpilot.utils.mode_manager import set_test_mode, reset_mode, get_mode_manager
 
 
 def test_health_check_basic():
@@ -113,6 +115,13 @@ def main():
     print("🧪 RUNNING SIMPLE UNIT TESTS")
     print("=" * 60)
 
+    # ✅ CRITICAL: Set test mode BEFORE running any tests
+    set_test_mode()
+    manager = get_mode_manager()
+    print(f"📁 Test Mode: {manager.mode.value}")
+    print(f"📁 Log Directory: {manager.get_log_dir()}")
+    print("=" * 60)
+
     try:
         test_health_check_basic()
         test_data_collection_empty()
@@ -121,6 +130,7 @@ def main():
 
         print("\n" + "=" * 60)
         print("✅ ALL TESTS PASSED")
+        print(f"📁 Test logs saved to: {manager.get_log_dir()}")
         print("=" * 60 + "\n")
 
     except AssertionError as e:
@@ -129,6 +139,10 @@ def main():
     except Exception as e:
         print(f"\n❌ ERROR: {e}\n")
         raise
+    finally:
+        # ✅ Reset to normal mode after tests
+        reset_mode()
+        print("🔄 Restored to normal mode")
 
 
 if __name__ == "__main__":

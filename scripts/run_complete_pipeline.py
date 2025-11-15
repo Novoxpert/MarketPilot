@@ -1,5 +1,5 @@
 """
-Run script for Complete Data Farm Pipeline (MP-007)
+Run script for Complete Data Farm Pipeline
 Executes full end-to-end data flow through all stages
 """
 
@@ -22,7 +22,7 @@ async def run_complete_pipeline():
             stage="pipeline",
             block="run_script",
             level="INFO",
-            msg="Starting complete pipeline execution (MP-007)",
+            msg="Starting complete pipeline execution",
         )
 
         # Initialize Data Farm
@@ -31,7 +31,7 @@ async def run_complete_pipeline():
         )
 
         print("\n" + "=" * 80)
-        print("🚀 DATA FARM COMPLETE PIPELINE - MP-007")
+        print("🚀 DATA FARM COMPLETE PIPELINE")
         print("=" * 80)
         print("\n✅ Data Farm initialized successfully!")
         print(f"📊 Loaded {len(farm.get_adapters())} adapter(s)")

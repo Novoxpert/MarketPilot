@@ -1,6 +1,6 @@
 """
-Centralized Logging System for Data Farm
-Writes structured JSON lines to organized log directories
+Mode-Aware Logging System
+Automatically uses test or normal directories based on mode
 """
 
 import json
@@ -8,25 +8,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
-
-# Log directories
-# Log directories
-LOG_BASE = Path("logs")
-LOG_DIRS = {
-    "pipeline": LOG_BASE / "pipeline",
-    "stages": LOG_BASE / "stages",
-    "adapters": LOG_BASE / "adapters",
-    "errors": LOG_BASE / "errors",
-}
-
-# Log level mapping
-LOG_LEVELS = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "CRITICAL": logging.CRITICAL,
-}
+from marketpilot.utils.mode_manager import get_mode_manager
 
 
 # Log level mapping
@@ -37,18 +19,30 @@ LOG_LEVELS = {
     "ERROR": logging.ERROR,
     "CRITICAL": logging.CRITICAL,
 }
+
+
+def _get_log_base_dir() -> Path:
+    """Get base log directory based on mode"""
+    return get_mode_manager().get_log_dir()
 
 
 def _create_log_dirs():
     """Create log directories if they don't exist"""
-    for dir_path in LOG_DIRS.values():
-        dir_path.mkdir(parents=True, exist_ok=True)
-    """Create log directories if they don't exist"""
-    for dir_path in LOG_DIRS.values():
+    log_base = _get_log_base_dir()
+
+    log_dirs = {
+        "pipeline": log_base / "pipeline",
+        "stages": log_base / "stages",
+        "adapters": log_base / "adapters",
+        "errors": log_base / "errors",
+    }
+
+    for dir_path in log_dirs.values():
         dir_path.mkdir(parents=True, exist_ok=True)
 
+    return log_dirs
 
-def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
+
 def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
     """
     Get log file path for a category
@@ -61,7 +55,8 @@ def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
     Returns:
         Path to log file
     """
-    log_dir = LOG_DIRS.get(category, LOG_DIRS["pipeline"])
+    log_base = _get_log_base_dir()
+    log_dir = log_base / category
 
     # Error logs always go to current.jsonl
     if category == "errors":
@@ -72,9 +67,13 @@ def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
         return log_dir / "current.jsonl"
 
     # For all other logs, use timestamped files
-    # For all other logs, use timestamped files
     timestamp = datetime.now().strftime("%Y%m%d")
-    return log_dir / f"{category}_{timestamp}.jsonl"
+
+    # Add mode prefix in test mode
+    mode_manager = get_mode_manager()
+    if mode_manager.is_test_mode:
+        return log_dir / f"test_{category}_{timestamp}.jsonl"
+
     return log_dir / f"{category}_{timestamp}.jsonl"
 
 
@@ -86,7 +85,7 @@ def log_event(
     extra: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
-    Log an event in JSONL format
+    Log an event in JSONL format (mode-aware)
 
     Args:
         stage: Pipeline stage (e.g., 'ingestion', 'quality')
@@ -94,23 +93,6 @@ def log_event(
         level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         msg: Log message
         extra: Additional fields to include in log
-
-    Example:
-        log_event('ingestion', 'fmp_adapter', 'INFO', 'Fetched 100 records', {'symbol': 'AAPL'})
-    """
-    # Create directories if needed
-    """
-    Log an event in JSONL format
-
-    Args:
-        stage: Pipeline stage (e.g., 'ingestion', 'quality')
-        block: Component block (e.g., 'alphavantage_adapter', 'price_validator')
-        level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        msg: Log message
-        extra: Additional fields to include in log
-
-    Example:
-        log_event('ingestion', 'fmp_adapter', 'INFO', 'Fetched 100 records', {'symbol': 'AAPL'})
     """
     # Create directories if needed
     _create_log_dirs()
@@ -118,7 +100,6 @@ def log_event(
     # Determine category based on level and block
     if stage == "initialization":
         category = "pipeline"
-    # ERROR and CRITICAL always go to errors/current.jsonl
     elif level in ["ERROR", "CRITICAL"]:
         category = "errors"
     elif "adapter" in block.lower():
@@ -141,84 +122,71 @@ def log_event(
         "message": msg,
     }
 
-    # Add extra fields
-    if extra:
-        log_entry.update(extra)
+    # Add mode info in test mode
+    mode_manager = get_mode_manager()
+    if mode_manager.is_test_mode:
+        log_entry["test_mode"] = True
+
     # Add extra fields
     if extra:
         log_entry.update(extra)
 
-    # Write to JSONL file
-    log_file = _get_log_file(category, stage, level)
     # Write to JSONL file
     log_file = _get_log_file(category, stage, level)
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
-        f.write(json.dumps(log_entry) + "\n")
 
-    # Also print to console for development
-    print(f"[{level}] {stage}.{block}: {msg}")
-    # Also print to console for development
-    print(f"[{level}] {stage}.{block}: {msg}")
+    # Also print to console for development (with mode indicator)
+    mode_prefix = "[TEST] " if mode_manager.is_test_mode else ""
+    print(f"{mode_prefix}[{level}] {stage}.{block}: {msg}")
 
 
 def setup_logging(log_level: str = "INFO"):
     """
-    Initialize logging system
+    Initialize logging system (mode-aware)
 
     Args:
-        log_level: Minimum log level to capture (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    """
-    """
-    Initialize logging system
-
-    Args:
-        log_level: Minimum log level to capture (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        log_level: Minimum log level to capture
     """
     _create_log_dirs()
 
     # Configure Python's logging module
-    # Configure Python's logging module
     logging.basicConfig(
-        level=LOG_LEVELS.get(log_level.upper(), logging.INFO),
         level=LOG_LEVELS.get(log_level.upper(), logging.INFO),
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
+    mode_manager = get_mode_manager()
     log_event(
-        "system",
         "system",
         "logger",
         "INFO",
-        "Logging system initialized",
-        {"log_level": log_level},
+        f"Logging system initialized in {mode_manager.mode.value} mode",
+        {"log_level": log_level, "mode": mode_manager.mode.value},
     )
 
 
-# Example usage and tests
-# Example usage and tests
+# Example usage
 if __name__ == "__main__":
-    # Initialize logging
-    # Initialize logging
-    setup_logging("DEBUG")
+    from marketpilot.utils.mode_manager import set_test_mode
 
-    # Test regular log
-    log_event("test_stage", "test_block", "INFO", "Test info message", {"test": True})
+    print("=" * 60)
+    print("Normal Mode Logging")
+    print("=" * 60)
 
-    # ✅ Test error log (should go to errors/current.jsonl)
-    log_event(
-        "test_stage",
-        "test_adapter",
-        "ERROR",
-        "Test error message",
-        {
-            "error_type": "TestError",
-            "error_message": "This is a test error",
-            "operation_id": "test123",
-            "success_flag": False,
-        },
-    )
+    setup_logging("INFO")
+    log_event("test", "test_block", "INFO", "Normal mode log")
 
-    print("\n✅ Check logs in:")
-    print("  - logs/pipeline/current.jsonl")
-    print("  - logs/errors/current.jsonl")
+    print()
+    print("=" * 60)
+    print("Test Mode Logging")
+    print("=" * 60)
+
+    set_test_mode()
+    setup_logging("INFO")
+    log_event("test", "test_block", "INFO", "Test mode log")
+
+    print()
+    print("Check logs in:")
+    print("  logs/        (normal mode)")
+    print("  logs_test/   (test mode)")
