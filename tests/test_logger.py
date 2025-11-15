@@ -1,6 +1,5 @@
 """
 Unit Tests for Logger - Updated for Mode-Aware Logger
-✅ No duplicate setup_logging calls - handled by conftest.py
 """
 
 import pytest
