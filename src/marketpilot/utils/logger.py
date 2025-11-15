@@ -1,6 +1,7 @@
 """
 Centralized Logging System for Data Farm
 Writes structured JSON lines to organized log directories
+Error logs go to /logs/errors/current.jsonl
 """
 
 import json
@@ -9,7 +10,6 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-# Log directories
 # Log directories
 LOG_BASE = Path("logs")
 LOG_DIRS = {
@@ -29,26 +29,12 @@ LOG_LEVELS = {
 }
 
 
-# Log level mapping
-LOG_LEVELS = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "CRITICAL": logging.CRITICAL,
-}
-
-
 def _create_log_dirs():
     """Create log directories if they don't exist"""
     for dir_path in LOG_DIRS.values():
         dir_path.mkdir(parents=True, exist_ok=True)
-    """Create log directories if they don't exist"""
-    for dir_path in LOG_DIRS.values():
-        dir_path.mkdir(parents=True, exist_ok=True)
 
 
-def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
 def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
     """
     Get log file path for a category
@@ -63,7 +49,7 @@ def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
     """
     log_dir = LOG_DIRS.get(category, LOG_DIRS["pipeline"])
 
-    # Error logs always go to current.jsonl
+    #  Error logs always go to current.jsonl
     if category == "errors":
         return log_dir / "current.jsonl"
 
@@ -72,9 +58,7 @@ def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
         return log_dir / "current.jsonl"
 
     # For all other logs, use timestamped files
-    # For all other logs, use timestamped files
     timestamp = datetime.now().strftime("%Y%m%d")
-    return log_dir / f"{category}_{timestamp}.jsonl"
     return log_dir / f"{category}_{timestamp}.jsonl"
 
 
@@ -99,26 +83,12 @@ def log_event(
         log_event('ingestion', 'fmp_adapter', 'INFO', 'Fetched 100 records', {'symbol': 'AAPL'})
     """
     # Create directories if needed
-    """
-    Log an event in JSONL format
-
-    Args:
-        stage: Pipeline stage (e.g., 'ingestion', 'quality')
-        block: Component block (e.g., 'alphavantage_adapter', 'price_validator')
-        level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        msg: Log message
-        extra: Additional fields to include in log
-
-    Example:
-        log_event('ingestion', 'fmp_adapter', 'INFO', 'Fetched 100 records', {'symbol': 'AAPL'})
-    """
-    # Create directories if needed
     _create_log_dirs()
 
     # Determine category based on level and block
     if stage == "initialization":
         category = "pipeline"
-    # ERROR and CRITICAL always go to errors/current.jsonl
+    #  ERROR and CRITICAL always go to errors/current.jsonl
     elif level in ["ERROR", "CRITICAL"]:
         category = "errors"
     elif "adapter" in block.lower():
@@ -144,20 +114,12 @@ def log_event(
     # Add extra fields
     if extra:
         log_entry.update(extra)
-    # Add extra fields
-    if extra:
-        log_entry.update(extra)
 
-    # Write to JSONL file
-    log_file = _get_log_file(category, stage, level)
     # Write to JSONL file
     log_file = _get_log_file(category, stage, level)
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
-        f.write(json.dumps(log_entry) + "\n")
 
-    # Also print to console for development
-    print(f"[{level}] {stage}.{block}: {msg}")
     # Also print to console for development
     print(f"[{level}] {stage}.{block}: {msg}")
 
@@ -169,24 +131,15 @@ def setup_logging(log_level: str = "INFO"):
     Args:
         log_level: Minimum log level to capture (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     """
-    """
-    Initialize logging system
-
-    Args:
-        log_level: Minimum log level to capture (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    """
     _create_log_dirs()
 
     # Configure Python's logging module
-    # Configure Python's logging module
     logging.basicConfig(
-        level=LOG_LEVELS.get(log_level.upper(), logging.INFO),
         level=LOG_LEVELS.get(log_level.upper(), logging.INFO),
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
     log_event(
-        "system",
         "system",
         "logger",
         "INFO",
@@ -196,9 +149,7 @@ def setup_logging(log_level: str = "INFO"):
 
 
 # Example usage and tests
-# Example usage and tests
 if __name__ == "__main__":
-    # Initialize logging
     # Initialize logging
     setup_logging("DEBUG")
 

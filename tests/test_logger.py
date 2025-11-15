@@ -1,4 +1,4 @@
-"""Story MP-003
+"""
 Unit tests for centralized logging system
 Run with: pytest tests/test_logger.py
 """
@@ -12,9 +12,14 @@ from marketpilot.utils.logger import log_event, setup_logging, LOG_DIRS
 @pytest.fixture
 def clean_logs():
     """Clean up log files before and after tests"""
-    # Setup: create directories
+    # Setup: create directories and remove existing jsonl logs
     for log_dir in LOG_DIRS.values():
         log_dir.mkdir(parents=True, exist_ok=True)
+        for old in log_dir.glob("*.jsonl"):
+            try:
+                old.unlink()
+            except Exception:
+                pass
 
     yield
 

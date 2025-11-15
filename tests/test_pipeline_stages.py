@@ -1,5 +1,5 @@
 """
-Unit tests for pipeline stages (MP-007)
+Unit tests for pipeline stages
 Tests individual stage functionality
 """
 

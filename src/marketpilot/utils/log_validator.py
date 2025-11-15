@@ -18,7 +18,11 @@ class LogValidator:
     REQUIRED_FIELDS = ["timestamp", "stage", "block", "level", "message"]
 
     # Required fields for stage/adapter logs
-    STAGE_REQUIRED_FIELDS = REQUIRED_FIELDS + ["operation_id", "duration_ms", "success_flag"]
+    STAGE_REQUIRED_FIELDS = REQUIRED_FIELDS + [
+        "operation_id",
+        "duration_ms",
+        "success_flag",
+    ]
 
     # Valid log levels
     VALID_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -157,7 +161,9 @@ class LogValidator:
                         report["total_entries"] += 1
 
                         # Validate entry structure
-                        validation_result = LogValidator._validate_entry(entry, line_num)
+                        validation_result = LogValidator._validate_entry(
+                            entry, line_num
+                        )
 
                         if validation_result["missing_fields"]:
                             report["missing_fields"].append(
@@ -232,7 +238,9 @@ class LogValidator:
         missing = []
 
         # Check if this is a completion log (should have metrics)
-        if "Completed" in entry.get("message", "") or "Failed" in entry.get("message", ""):
+        if "Completed" in entry.get("message", "") or "Failed" in entry.get(
+            "message", ""
+        ):
             for field in ["operation_id", "duration_ms", "success_flag"]:
                 if field not in entry.get("extra", {}):
                     missing.append(field)
@@ -319,13 +327,19 @@ class LogValidator:
                     print(f"  File: {file_report['file']}")
 
                     if file_report["malformed_entries"]:
-                        print(f"    Malformed entries: {len(file_report['malformed_entries'])}")
+                        print(
+                            f"    Malformed entries: {len(file_report['malformed_entries'])}"
+                        )
 
                     if file_report["missing_fields"]:
-                        print(f"    Missing fields: {len(file_report['missing_fields'])}")
+                        print(
+                            f"    Missing fields: {len(file_report['missing_fields'])}"
+                        )
 
                     if file_report["invalid_levels"]:
-                        print(f"    Invalid levels: {len(file_report['invalid_levels'])}")
+                        print(
+                            f"    Invalid levels: {len(file_report['invalid_levels'])}"
+                        )
 
                     print()
 

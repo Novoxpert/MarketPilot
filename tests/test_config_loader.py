@@ -1,4 +1,4 @@
-"""Story MP-002 Tests for config loader"""
+"""Tests for config loader"""
 
 import pytest
 from marketpilot.config.config_loader import (

@@ -1,5 +1,5 @@
 """
-Unit Tests for Enhanced Logging - MP-009
+Unit Tests for Enhanced Logging
 """
 
 import pytest
@@ -296,17 +296,16 @@ class TestIntegratedLogging:
     async def test_stage_logging_integration(self):
         """Test that stages log correctly"""
         # Import after potential updates
-        import importlib
         import sys
-        
+
         # Clear cache to get fresh import
-        if 'marketpilot.data_farm.stages.health_check' in sys.modules:
-            del sys.modules['marketpilot.data_farm.stages.health_check']
-        if 'marketpilot.data_farm.stages.base_stage' in sys.modules:
-            del sys.modules['marketpilot.data_farm.stages.base_stage']
-        
+        if "marketpilot.data_farm.stages.health_check" in sys.modules:
+            del sys.modules["marketpilot.data_farm.stages.health_check"]
+        if "marketpilot.data_farm.stages.base_stage" in sys.modules:
+            del sys.modules["marketpilot.data_farm.stages.base_stage"]
+
         from marketpilot.data_farm.stages.health_check import HealthCheckStage
-        
+
         stage = HealthCheckStage()
 
         # Execute stage with mock data
@@ -320,19 +319,19 @@ class TestIntegratedLogging:
         assert len(log_files) > 0, "Stage logs should exist"
 
         # Check if BaseStage has been updated to enhanced version
-        has_enhanced_logging = hasattr(stage, 'operation_id')
-        
+        has_enhanced_logging = hasattr(stage, "operation_id")
+
         if not has_enhanced_logging:
             print("\n⚠️  WARNING: BaseStage has not been updated yet!")
             print("   Stage is using old BaseStage without enhanced logging.")
             print("   Please update src/marketpilot/data_farm/stages/base_stage.py")
-            print("   with the enhanced version to enable full MP-009 features.")
-            
+            print("   with the enhanced version to enable full features.")
+
             # For now, just verify basic logging works
             with open(log_files[0], "r", encoding="utf-8") as f:
                 lines = f.readlines()
                 assert len(lines) > 0, "Should have some log entries"
-            
+
             # Mark test as passed but with warning
             pytest.skip("BaseStage not yet updated - skipping enhanced logging check")
             return
@@ -341,16 +340,16 @@ class TestIntegratedLogging:
         completion_log_found = False
         with open(log_files[0], "r", encoding="utf-8") as f:
             lines = f.readlines()
-            
+
             # Look for completion log (last few lines)
             for line in reversed(lines[-10:]):  # Check last 10 lines
                 try:
                     entry = json.loads(line)
-                    
+
                     # Check if this is a completion log for health_check
-                    if (entry.get("stage") == "health_check" and 
-                        "Completed" in entry.get("message", "")):
-                        
+                    if entry.get(
+                        "stage"
+                    ) == "health_check" and "Completed" in entry.get("message", ""):
                         # Verify it has the enhanced logging fields
                         # Check at top level (not in extra dict)
                         if (
@@ -366,7 +365,7 @@ class TestIntegratedLogging:
                             break
                 except json.JSONDecodeError:
                     continue
-        
+
         assert completion_log_found, "Completion log with enhanced fields not found"
 
 

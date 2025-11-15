@@ -1,5 +1,5 @@
 """
-Simple unit tests for pipeline stages (MP-007)
+Simple unit tests for pipeline stages
 Basic tests to verify stage functionality
 """
 

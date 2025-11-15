@@ -16,16 +16,37 @@ class NaNProcessingStage(BaseStage):
 
     async def _process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Process NaN values in raw data"""
-        raw_data = data.get("raw_data", [])
+
+        # Validate input shape
+        if not isinstance(data, dict):
+            raise ValueError("Input to NaNProcessingStage must be a dict")
+
+        if "raw_data" not in data:
+            raise ValueError("Missing required key 'raw_data' in pipeline data")
+
+        raw_data = data.get("raw_data")
+        if not isinstance(raw_data, list):
+            raise ValueError("'raw_data' must be a list of records")
 
         nan_count = 0
         processed_records = []
 
-        for record in raw_data:
-            record_data = record.get("data", {})
+        for idx, record in enumerate(raw_data):
+            if not isinstance(record, dict):
+                raise ValueError(
+                    f"Each record in 'raw_data' must be a dict (index={idx})"
+                )
+
+            # Expect 'data' field to exist and be a dict
+            if "data" not in record or not isinstance(record["data"], dict):
+                raise ValueError(
+                    f"Record at index {idx} is missing 'data' dict field or it is not a dict"
+                )
+
+            record_data = record["data"]
 
             # Check each field for NaN/None
-            for key, value in record_data.items():
+            for key, value in list(record_data.items()):
                 if value is None or (isinstance(value, float) and math.isnan(value)):
                     nan_count += 1
                     # Simple strategy: replace with 0
@@ -38,6 +59,7 @@ class NaNProcessingStage(BaseStage):
                         extra={
                             "symbol": record.get("symbol"),
                             "adapter_id": record.get("adapter_id"),
+                            "record_index": idx,
                         },
                     )
 

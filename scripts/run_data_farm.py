@@ -22,7 +22,7 @@ async def run_smoke_test():
             stage="pipeline",
             block="run_script",
             level="INFO",
-            msg="Starting Data Farm smoke test (MP-006)",
+            msg="Starting Data Farm smoke test",
         )
 
         # Initialize Data Farm
