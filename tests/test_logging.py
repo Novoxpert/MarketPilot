@@ -1,24 +1,21 @@
 """
 Unit Tests for Enhanced Logging
+✅ Now mode-aware - works in both test and normal mode
+✅ No duplicate setup_logging calls
 """
 
 import pytest
 import json
-from pathlib import Path
 from datetime import datetime
-from marketpilot.utils.logger import log_event, setup_logging
+from marketpilot.utils.logger import log_event  # ✅ حذف setup_logging
 from marketpilot.utils.log_validator import LogValidator
+from marketpilot.utils.mode_manager import get_mode_manager
 
 
 class TestLoggingEnhancements:
     """Test enhanced logging functionality"""
 
-    @pytest.fixture(autouse=True)
-    def setup_logs(self):
-        """Setup logging for tests"""
-        setup_logging("INFO")
-        yield
-        # Cleanup not needed as logs are useful for validation
+    # ✅ No setup fixture needed - conftest.py handles everything
 
     def test_log_event_basic_structure(self):
         """Test that log events have basic structure"""
@@ -30,9 +27,10 @@ class TestLoggingEnhancements:
             extra={"test_field": "test_value"},
         )
 
-        # Verify log file exists
-        log_dir = Path("logs")
-        assert log_dir.exists(), "Log directory should exist"
+        # ✅ Use mode-aware log directory
+        manager = get_mode_manager()
+        log_dir = manager.get_log_dir()
+        assert log_dir.exists(), f"Log directory should exist at {log_dir}"
 
         # Find most recent log file
         log_files = list(log_dir.rglob("*.jsonl"))
@@ -53,8 +51,9 @@ class TestLoggingEnhancements:
             },
         )
 
-        # Verify metrics are logged
-        log_files = list(Path("logs").rglob("*.jsonl"))
+        # ✅ Use mode-aware log directory
+        manager = get_mode_manager()
+        log_files = list(manager.get_log_dir().rglob("*.jsonl"))
         assert len(log_files) > 0
 
     def test_error_log_routing(self):
@@ -67,13 +66,12 @@ class TestLoggingEnhancements:
             extra={"error_type": "TestError", "error_message": "Test error"},
         )
 
-        # ✅ Check if error log exists at errors/current.jsonl
-        error_log = Path("logs/errors/current.jsonl")
-        assert (
-            error_log.exists()
-        ), "Error log file should exist at logs/errors/current.jsonl"
+        # ✅ Use mode-aware error log path
+        manager = get_mode_manager()
+        error_log = manager.get_log_dir() / "errors" / "current.jsonl"
+        assert error_log.exists(), f"Error log file should exist at {error_log}"
 
-        # ✅ Verify it contains the error
+        # Verify it contains the error
         with open(error_log, "r", encoding="utf-8") as f:
             lines = f.readlines()
             assert len(lines) > 0, "Error log should have entries"
@@ -93,9 +91,12 @@ class TestLoggingEnhancements:
             extra={"adapter_id": "price_001"},
         )
 
-        # Check if adapter log exists
-        adapter_log = Path("logs/adapters")
-        assert adapter_log.exists(), "Adapter log directory should exist"
+        # ✅ Use mode-aware adapter log path
+        manager = get_mode_manager()
+        adapter_log = manager.get_log_dir() / "adapters"
+        assert (
+            adapter_log.exists()
+        ), f"Adapter log directory should exist at {adapter_log}"
 
     def test_stage_log_routing(self):
         """Test that stage logs go to correct directory"""
@@ -107,9 +108,10 @@ class TestLoggingEnhancements:
             extra={"operation_id": "test456"},
         )
 
-        # Check if stage log exists
-        stage_log = Path("logs/stages")
-        assert stage_log.exists(), "Stage log directory should exist"
+        # ✅ Use mode-aware stage log path
+        manager = get_mode_manager()
+        stage_log = manager.get_log_dir() / "stages"
+        assert stage_log.exists(), f"Stage log directory should exist at {stage_log}"
 
 
 class TestLogValidator:
@@ -228,8 +230,9 @@ class TestLogValidator:
 
     def test_validate_log_file_format(self):
         """Test validation of entire log file"""
-        # Create a test log file
-        test_log = Path("logs/test_validation.jsonl")
+        # ✅ Use mode-aware log directory
+        manager = get_mode_manager()
+        test_log = manager.get_log_dir() / "test_validation.jsonl"
         test_log.parent.mkdir(parents=True, exist_ok=True)
 
         with open(test_log, "w", encoding="utf-8") as f:
@@ -259,8 +262,9 @@ class TestLogValidator:
 
     def test_validate_malformed_log_entry(self):
         """Test detection of malformed JSON"""
-        # Create a test log file with malformed entry
-        test_log = Path("logs/test_malformed.jsonl")
+        # ✅ Use mode-aware log directory
+        manager = get_mode_manager()
+        test_log = manager.get_log_dir() / "test_malformed.jsonl"
         test_log.parent.mkdir(parents=True, exist_ok=True)
 
         with open(test_log, "w", encoding="utf-8") as f:
@@ -295,78 +299,88 @@ class TestIntegratedLogging:
     @pytest.mark.asyncio
     async def test_stage_logging_integration(self):
         """Test that stages log correctly"""
-        # Import after potential updates
-        import sys
-
-        # Clear cache to get fresh import
-        if "marketpilot.data_farm.stages.health_check" in sys.modules:
-            del sys.modules["marketpilot.data_farm.stages.health_check"]
-        if "marketpilot.data_farm.stages.base_stage" in sys.modules:
-            del sys.modules["marketpilot.data_farm.stages.base_stage"]
-
         from marketpilot.data_farm.stages.health_check import HealthCheckStage
+        from marketpilot.utils.mode_manager import get_mode_manager
 
         stage = HealthCheckStage()
 
-        # Execute stage with mock data
-        data = {"adapters": [], "symbols": ["AAPL"]}
-        data = {"adapters": [], "symbols": ["AAPL"]}
-
-        result = await stage.execute(data)
-        print(result)
-        # Verify stage logged correctly
-        log_files = list(Path("logs/stages").rglob("*.jsonl"))
-        assert len(log_files) > 0, "Stage logs should exist"
-
-        # Check if BaseStage has been updated to enhanced version
+        # Check if BaseStage has been updated
         has_enhanced_logging = hasattr(stage, "operation_id")
-
         if not has_enhanced_logging:
-            print("\n⚠️  WARNING: BaseStage has not been updated yet!")
-            print("   Stage is using old BaseStage without enhanced logging.")
-            print("   Please update src/marketpilot/data_farm/stages/base_stage.py")
-            print("   with the enhanced version to enable full features.")
-
-            # For now, just verify basic logging works
-            with open(log_files[0], "r", encoding="utf-8") as f:
-                lines = f.readlines()
-                assert len(lines) > 0, "Should have some log entries"
-
-            # Mark test as passed but with warning
-            pytest.skip("BaseStage not yet updated - skipping enhanced logging check")
+            pytest.skip(
+                "BaseStage not yet updated with enhanced logging. "
+                "Please update src/marketpilot/data_farm/stages/base_stage.py "
+                "with the enhanced version"
+            )
             return
 
-        # Read log entries and find completion log
+        # Execute stage with mock data
+        data = {"adapters": [], "symbols": ["AAPL"]}
+        result = await stage.execute(data)
+        print(result)
+        # Verify stage logged correctly (use mode-aware directory)
+        manager = get_mode_manager()
+        log_dir = manager.get_log_dir() / "stages"
+        log_files = list(log_dir.rglob("*.jsonl"))
+        assert len(log_files) > 0, f"Stage logs should exist in {log_dir}"
+
+        # Find completion log with enhanced fields
         completion_log_found = False
         with open(log_files[0], "r", encoding="utf-8") as f:
             lines = f.readlines()
 
-            # Look for completion log (last few lines)
-            for line in reversed(lines[-10:]):  # Check last 10 lines
+        for line in reversed(lines[-10:]):
+            try:
+                entry = json.loads(line)
+                if entry.get("stage") == "health_check" and "Completed" in entry.get(
+                    "message", ""
+                ):
+                    # ✅ FIX: Check in root of entry, not in extra dict
+                    # The logger merges extra fields into root
+                    required_fields = ["operation_id", "duration_ms", "success_flag"]
+
+                    # Check if all required fields exist in the root of the entry
+                    if all(field in entry for field in required_fields):
+                        completion_log_found = True
+
+                        # Additional validation
+                        assert isinstance(
+                            entry["operation_id"], str
+                        ), "operation_id should be a string"
+                        assert isinstance(
+                            entry["duration_ms"], (int, float)
+                        ), "duration_ms should be numeric"
+                        assert isinstance(
+                            entry["success_flag"], bool
+                        ), "success_flag should be boolean"
+                        assert (
+                            entry["success_flag"] is True
+                        ), "success_flag should be True for successful completion"
+
+                        break
+            except json.JSONDecodeError:
+                continue
+
+        if not completion_log_found:
+            # Provide helpful debug info
+            print("\n🔍 DEBUG: Recent log entries:")
+            for line in lines[-5:]:
                 try:
                     entry = json.loads(line)
+                    print(
+                        f"  Stage: {entry.get('stage')}, "
+                        f"Message: {entry.get('message')}, "
+                        f"Keys: {list(entry.keys())}"
+                    )
+                except Exception as e:
+                    print(f"Error parsing line: {e}")
 
-                    # Check if this is a completion log for health_check
-                    if entry.get(
-                        "stage"
-                    ) == "health_check" and "Completed" in entry.get("message", ""):
-                        # Verify it has the enhanced logging fields
-                        # Check at top level (not in extra dict)
-                        if (
-                            "operation_id" in entry
-                            and "duration_ms" in entry
-                            and "success_flag" in entry
-                        ):
-                            completion_log_found = True
-                            print("\n✅ Enhanced logging verified!")
-                            print(f"   Operation ID: {entry['operation_id']}")
-                            print(f"   Duration: {entry['duration_ms']}ms")
-                            print(f"   Success: {entry['success_flag']}")
-                            break
-                except json.JSONDecodeError:
-                    continue
+            pytest.fail(
+                "Enhanced logging fields not found in completion log. "
+                "Fields should be in root of entry (not in 'extra' dict)"
+            )
 
-        assert completion_log_found, "Completion log with enhanced fields not found"
+        assert completion_log_found, "Should find completion log with enhanced fields"
 
 
 if __name__ == "__main__":

@@ -55,6 +55,7 @@ htmlcov/
 dmypy.json
 
 # Logs
+logs_test/
 logs/
 *.log
 
@@ -74,4 +75,5 @@ Thumbs.db
 .DS_Store
 
 # output
-data/output
+data/
+data_test/
