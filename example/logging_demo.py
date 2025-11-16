@@ -27,7 +27,8 @@ async def main():
     print("🚀 Running smoke test...")
     symbols = ["AAPL", "NVDA"]
     results = await farm.run_smoke_test(symbols)
-    print(f"✅ Smoke test complete: {results['passed']}/{results['total_tests']} passed")
+    print("✅ Smoke test complete:")
+    print(f"{results['passed']}/{results['total_tests']} passed")
     print()
 
     # Show log directory structure

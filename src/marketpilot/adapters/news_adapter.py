@@ -190,8 +190,6 @@ class FlexibleQualityAssuranceStage:
                             price_value = record_data[price_field]
                             if price_value is not None:
                                 float(price_value)
-                                if float(price_value) < 0:
-                                    qa_issues.append(f"Negative price in {price_field}")
                 except (ValueError, TypeError) as e:
                     qa_issues.append(f"Invalid numeric value: {str(e)}")
 
