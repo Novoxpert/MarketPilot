@@ -55,9 +55,6 @@ class QualityAssuranceStage(BaseStage):
                             if price_value is not None:
                                 float(price_value)  # Will raise ValueError if invalid
 
-                                # Check for negative prices
-                                if float(price_value) < 0:
-                                    qa_issues.append(f"Negative price in {price_field}")
                 except (ValueError, TypeError) as e:
                     qa_issues.append(f"Invalid numeric value: {str(e)}")
 
