@@ -21,7 +21,7 @@ class ModeManager:
 
     _instance = None
     _current_mode: AppMode = AppMode.NORMAL
-    _initial_mode: AppMode = AppMode.NORMAL  # ✅ Track initial mode
+    _initial_mode: AppMode = AppMode.NORMAL
 
     def __new__(cls):
         """Singleton pattern"""

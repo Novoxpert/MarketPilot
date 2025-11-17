@@ -16,7 +16,7 @@ from marketpilot.utils.logger import log_event, setup_logging
 def check_directory_structure():
     """Check and create directory structure"""
     print("=" * 60)
-    print("📁 Checking Directory Structure")
+    print(" Checking Directory Structure")
     print("=" * 60)
     print()
 
@@ -27,11 +27,11 @@ def check_directory_structure():
 
     for name, path in paths.items():
         if path.exists():
-            print(f"✅ {name}: {path}")
+            print(f" {name}: {path}")
         else:
-            print(f"⚠️  {name}: {path} (creating...)")
+            print(f"  {name}: {path} (creating...)")
             path.mkdir(parents=True, exist_ok=True)
-            print("   ✅ Created")
+            print("    Created")
 
     print()
 
@@ -39,7 +39,7 @@ def check_directory_structure():
 def create_sample_logs():
     """Create sample log entries"""
     print("=" * 60)
-    print("📝 Creating Sample Logs")
+    print(" Creating Sample Logs")
     print("=" * 60)
     print()
 
@@ -70,14 +70,14 @@ def create_sample_logs():
 
     log_event("test_pipeline", "test", "INFO", "Sample pipeline log")
 
-    print("✅ Sample logs created")
+    print(" Sample logs created")
     print()
 
 
 def create_sample_data():
     """Create sample data files"""
     print("=" * 60)
-    print("💾 Creating Sample Data")
+    print(" Creating Sample Data")
     print("=" * 60)
     print()
 
@@ -105,13 +105,13 @@ def create_sample_data():
     with open(output_file, "w") as f:
         json.dump(sample_data, f, indent=2)
 
-    print(f"✅ Created: {output_file}")
+    print(f" Created: {output_file}")
 
 
 def verify_isolation():
     """Verify that test and normal modes are isolated"""
     print("=" * 60)
-    print("🔍 Verifying Isolation")
+    print(" Verifying Isolation")
     print("=" * 60)
     print()
 
@@ -122,9 +122,9 @@ def verify_isolation():
     for dir_path in normal_dirs:
         if dir_path.exists():
             file_count = sum(1 for _ in dir_path.rglob("*") if _.is_file())
-            print(f"  ✅ {dir_path}/ ({file_count} files)")
+            print(f"   {dir_path}/ ({file_count} files)")
         else:
-            print(f"  ⚠️  {dir_path}/ (doesn't exist)")
+            print(f"    {dir_path}/ (doesn't exist)")
 
     print()
 
@@ -135,9 +135,9 @@ def verify_isolation():
     for dir_path in test_dirs:
         if dir_path.exists():
             file_count = sum(1 for _ in dir_path.rglob("*") if _.is_file())
-            print(f"  ✅ {dir_path}/ ({file_count} files)")
+            print(f"   {dir_path}/ ({file_count} files)")
         else:
-            print(f"  ❌ {dir_path}/ (doesn't exist)")
+            print(f"   {dir_path}/ (doesn't exist)")
 
     print()
 
@@ -164,7 +164,7 @@ def show_file_tree(
 def show_complete_structure():
     """Show complete directory structure"""
     print("=" * 60)
-    print("🌳 Complete Directory Structure")
+    print(" Complete Directory Structure")
     print("=" * 60)
     print()
 
@@ -208,7 +208,7 @@ async def main():
     """Main verification"""
     print()
     print("=" * 60)
-    print("🧪 TEST MODE VERIFICATION")
+    print(" TEST MODE VERIFICATION")
     print("=" * 60)
     print()
 
@@ -253,7 +253,7 @@ async def main():
 
     # Summary
     print("=" * 60)
-    print("✅ VERIFICATION COMPLETE")
+    print(" VERIFICATION COMPLETE")
     print("=" * 60)
     print()
 
@@ -263,28 +263,28 @@ async def main():
 
     # Check test directories exist
     if Path("logs_test").exists():
-        checks.append("✅ logs_test/ created")
+        checks.append(" logs_test/ created")
     else:
-        checks.append("❌ logs_test/ NOT created")
+        checks.append(" logs_test/ NOT created")
         success = False
 
     if Path("data_test").exists():
-        checks.append("✅ data_test/ created")
+        checks.append(" data_test/ created")
     else:
-        checks.append("❌ data_test/ NOT created")
+        checks.append(" data_test/ NOT created")
         success = False
 
     # Check files exist
     if list(Path("logs_test").rglob("*.jsonl")):
-        checks.append("✅ Test logs created")
+        checks.append(" Test logs created")
     else:
-        checks.append("❌ Test logs NOT created")
+        checks.append(" Test logs NOT created")
         success = False
 
     if Path("data_test/output").exists():
-        checks.append("✅ Test data output created")
+        checks.append(" Test data output created")
     else:
-        checks.append("❌ Test data output NOT created")
+        checks.append(" Test data output NOT created")
         success = False
 
     print("Verification Results:")
@@ -294,9 +294,9 @@ async def main():
     print()
 
     if success:
-        print("🎉 All checks passed!")
+        print(" All checks passed!")
     else:
-        print("⚠️  Some checks failed")
+        print("  Some checks failed")
 
     print()
     print("=" * 60)

@@ -1,6 +1,6 @@
 """
 Quality Assurance Stage - Validate data quality
-Fixed to properly validate heterogeneous data from multiple adapters
+Properly validate heterogeneous data from multiple adapters
 """
 
 from typing import Dict, Any, List

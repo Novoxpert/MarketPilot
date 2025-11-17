@@ -1,6 +1,5 @@
 """
-ResilientDataFarm - Updated with Schema Validation
-Added automatic validation after pipeline execution
+ResilientDataFarm
 """
 
 from typing import Dict, Any, List
@@ -22,7 +21,7 @@ from marketpilot.data_farm.stages.deduplication import DeduplicationStage
 from marketpilot.data_farm.stages.quality_assurance import QualityAssuranceStage
 from marketpilot.data_farm.stages.data_export import DataExportStage
 
-# ✅ NEW: Import schema validator
+#  NEW: Import schema validator
 from marketpilot.utils.schema_validator import validate_pipeline_stages
 
 
@@ -224,7 +223,7 @@ class ResilientDataFarm:
                 # Execute stage
                 pipeline_data = await stage.execute(pipeline_data)
 
-            # ✅ NEW: Validate pipeline schema consistency
+            #  NEW: Validate pipeline schema consistency
             log_event(
                 stage="pipeline",
                 block="validation",
@@ -348,7 +347,7 @@ class ResilientDataFarm:
                             {
                                 "adapter_id": adapter.adapter_id,
                                 "symbol": symbol,
-                                "status": "✅ PASSED",
+                                "status": " PASSED",
                             }
                         )
                     else:
@@ -357,7 +356,7 @@ class ResilientDataFarm:
                             {
                                 "adapter_id": adapter.adapter_id,
                                 "symbol": symbol,
-                                "status": "❌ FAILED",
+                                "status": " FAILED",
                                 "error": result.get("error", "Unknown"),
                             }
                         )
@@ -369,7 +368,7 @@ class ResilientDataFarm:
                         {
                             "adapter_id": adapter.adapter_id,
                             "symbol": symbol,
-                            "status": "❌ EXCEPTION",
+                            "status": " EXCEPTION",
                             "error": str(e),
                         }
                     )

@@ -1,6 +1,5 @@
 """
 Clean and stable Unit Tests for Mode-Aware Logger
-No duplicate tests, no duplicated imports, all tests organized.
 """
 
 import json
@@ -76,7 +75,7 @@ class TestLogger:
         assert found, "Log entry with correct format not found"
 
     # ---------------------------------------------------------
-    def test_error_log_routing(self):
+    def test_error_log(self):
         """Ensure ERROR logs go to errors directory"""
 
         log_event(
@@ -98,7 +97,7 @@ class TestLogger:
         assert has_error, "No ERROR entry inside errors log"
 
     # ---------------------------------------------------------
-    def test_adapter_log_routing(self):
+    def test_adapter_log(self):
         """Ensure adapter logs go to adapters/ directory"""
 
         log_event(
@@ -115,7 +114,7 @@ class TestLogger:
         assert len(list(adapter_dir.glob("*.jsonl"))) > 0
 
     # ---------------------------------------------------------
-    def test_stage_log_routing(self):
+    def test_stage_log(self):
         """Ensure stage logs go to stages/ directory"""
 
         log_event(

@@ -39,7 +39,7 @@ class ResilientPriceAdapter(BaseAdapter):
                 "adjusted_close": 152.0,
             }
 
-            # ✅ Validate against schema BEFORE returning
+            #  Validate against schema BEFORE returning
             self.validate_schema(mock_data)
 
             self.log_success(symbol, record_count=1)

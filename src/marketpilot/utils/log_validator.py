@@ -27,7 +27,7 @@ class LogValidator:
     # Valid log levels
     VALID_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
-    # ✅ JSON Schema for log entries
+    #  JSON Schema for log entries
     LOG_ENTRY_SCHEMA = {
         "type": "object",
         "required": ["timestamp", "stage", "block", "level", "message"],
@@ -49,7 +49,7 @@ class LogValidator:
         },
     }
 
-    # ✅ Schema for error logs
+    #  Schema for error logs
     ERROR_LOG_SCHEMA = {
         "type": "object",
         "required": ["timestamp", "stage", "block", "level", "message"],
@@ -317,9 +317,9 @@ class LogValidator:
         print()
 
         if report["overall_valid"]:
-            print("✅ All log files are valid!")
+            print(" All log files are valid!")
         else:
-            print("❌ Some log files have issues:")
+            print(" Some log files have issues:")
             print()
 
             for file_report in report["files_validated"]:

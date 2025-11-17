@@ -1,7 +1,6 @@
 """
 Pytest Configuration
 Automatically sets test mode for all pytest tests
-Place this file in your tests/ directory
 """
 
 import pytest
@@ -18,13 +17,13 @@ def test_mode_session():
     # Set test mode at start of session
     set_test_mode()
 
-    # ✅ Setup logging ONCE for entire test session
+    #  Setup logging ONCE for entire test session
     setup_logging("INFO")
 
     manager = get_mode_manager()
 
     print("\n{'='*60}")
-    print("🧪 TEST MODE ACTIVATED")
+    print(" TEST MODE ACTIVATED")
     print("{'='*60}")
     print(f"Mode: {manager.mode.value}")
     print(f"Log Directory: {manager.get_log_dir()}")
@@ -36,7 +35,7 @@ def test_mode_session():
     # Reset to normal mode after all tests
     reset_mode()
     print(f"\n{'='*60}")
-    print("🔄 TEST SESSION COMPLETE - Restored to normal mode")
+    print(" TEST SESSION COMPLETE - Restored to normal mode")
     print(f"{'='*60}\n")
 
 
@@ -47,11 +46,9 @@ def log_test_info(request):
     Runs automatically for every test
     """
     test_name = request.node.name
-    print(f"\n▶️  Running: {test_name}")
+    print(f"\n  Running: {test_name}")
 
     yield
-
-    # Can add post-test cleanup here if needed
 
 
 @pytest.fixture
@@ -105,5 +102,5 @@ def cleanup_test_logs():
     # import shutil
     # test_log_dir = Path("logs_test")
     # if test_log_dir.exists():
-    #     print(f"\n🧹 Cleaning up test logs: {test_log_dir}")
+    #     print(f"\n Cleaning up test logs: {test_log_dir}")
     #     shutil.rmtree(test_log_dir)

@@ -1,6 +1,5 @@
 """
 Mode-Aware Logging System
-Automatically uses test or normal directories based on mode
 """
 
 import json
@@ -45,12 +44,12 @@ def _create_log_dirs():
 
 def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
     """
-    Get log file path for a category
+    Get log file path
 
     Args:
         category: Log category (pipeline, stages, adapters, errors)
         stage: Stage name (for special handling)
-        level: Log level (for error routing)
+        level: Log level
 
     Returns:
         Path to log file
@@ -58,23 +57,29 @@ def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
     log_base = _get_log_base_dir()
     log_dir = log_base / category
 
-    # Error logs always go to current.jsonl
+    # Add mode prefix in test mode
+    # mode_manager = get_mode_manager()
+    # prefix = "test_" if mode_manager.is_test_mode else ""
+
     if category == "errors":
         return log_dir / "current.jsonl"
 
-    # For initialization stage in pipeline, use 'current.jsonl'
-    if category == "pipeline" and stage == "initialization":
-        return log_dir / "current.jsonl"
+    elif category == "pipeline":
+        if stage == "initialization":
+            return log_dir / "initialization.jsonl"
+        return log_dir / "pipeline.jsonl"
 
-    # For all other logs, use timestamped files
-    timestamp = datetime.now().strftime("%Y%m%d")
+    elif category == "stages":
+        # Each stage gets its own file
+        # if stage:
+        #     return log_dir / "{stage}.jsonl"
+        return log_dir / "stages.jsonl"
 
-    # Add mode prefix in test mode
-    mode_manager = get_mode_manager()
-    if mode_manager.is_test_mode:
-        return log_dir / f"test_{category}_{timestamp}.jsonl"
+    elif category == "adapters":
+        return log_dir / "adapters.jsonl"
 
-    return log_dir / f"{category}_{timestamp}.jsonl"
+    else:
+        return log_dir / f"{category}.jsonl"
 
 
 def log_event(
@@ -108,6 +113,13 @@ def log_event(
         "ingestion",
         "quality",
         "storage",
+        "health_check",
+        "data_collection",
+        "nan_processing",
+        "temporal_alignment",
+        "deduplication",
+        "quality_assurance",
+        "data_export",
     ]:
         category = "stages"
     else:
@@ -131,7 +143,7 @@ def log_event(
     if extra:
         log_entry.update(extra)
 
-    # Write to JSONL file
+    # Write to JSONL file (append mode)
     log_file = _get_log_file(category, stage, level)
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
@@ -166,6 +178,30 @@ def setup_logging(log_level: str = "INFO"):
     )
 
 
+def clear_logs(category: Optional[str] = None):
+    """
+    Clear log files (useful for testing)
+
+    Args:
+        category: Specific category to clear, or None for all
+    """
+    log_base = _get_log_base_dir()
+
+    if category:
+        # Clear specific category
+        category_dir = log_base / category
+        if category_dir.exists():
+            for log_file in category_dir.glob("*.jsonl"):
+                log_file.unlink()
+    else:
+        # Clear all logs
+        for category in ["pipeline", "stages", "adapters", "errors"]:
+            category_dir = log_base / category
+            if category_dir.exists():
+                for log_file in category_dir.glob("*.jsonl"):
+                    log_file.unlink()
+
+
 # Example usage
 if __name__ == "__main__":
     from marketpilot.utils.mode_manager import set_test_mode
@@ -187,6 +223,13 @@ if __name__ == "__main__":
     log_event("test", "test_block", "INFO", "Test mode log")
 
     print()
-    print("Check logs in:")
-    print("  logs/        (normal mode)")
-    print("  logs_test/   (test mode)")
+    print("Log files created:")
+    print("  logs/pipeline/pipeline.jsonl")
+    print("  logs/stages/stages.jsonl")
+    print("  logs/adapters/adapters.jsonl")
+    print("  logs/errors/errors.jsonl")
+    print()
+    print("Test mode:")
+    print("  logs_test/pipeline/test_pipeline.jsonl")
+    print("  logs_test/stages/test_stages.jsonl")
+    print("  etc.")

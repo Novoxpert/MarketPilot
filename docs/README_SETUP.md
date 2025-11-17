@@ -162,9 +162,9 @@ Each log line should be valid JSON with these fields:
 ## Verification Checklist
 
 - [ ] All directories exist: `adapters/`, `stages/`, `errors/`, `pipeline/`
-- [ ] Files named with date: `category_YYYYMMDD.jsonl`
+- [ ] Files named category: `category.jsonl`
 - [ ] Each line is valid JSON
-- [ ] Logs routed to correct directories
+- [ ] Logs to correct directories
 ## Need Help?
 
 - Check troubleshooting section above

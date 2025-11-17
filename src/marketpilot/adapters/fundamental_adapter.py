@@ -1,7 +1,6 @@
 """
 Resilient Fundamental Adapter using Financial Modeling Prep (FMP)
 Inherits schema validation from BaseAdapter
-FIXED: Added timestamp field to result_data
 """
 
 from typing import Dict, Any
@@ -51,13 +50,13 @@ class ResilientFundamentalAdapter(BaseAdapter):
 
             result_data = {
                 "symbol": symbol,
-                "timestamp": datetime.now().isoformat(),  # ✅ ADDED THIS LINE
+                "timestamp": datetime.now().isoformat(),
                 "startdate": start_date.isoformat(),
                 "enddate": end_date.isoformat(),
                 "data": mock_fundamentals,
             }
 
-            # ✅ Validate against schema BEFORE returning
+            #  Validate against schema BEFORE returning
             self.validate_schema(result_data)
 
             self.log_success(symbol, record_count=1)
