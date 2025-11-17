@@ -1,7 +1,3 @@
-"""
-Fixed News Adapter - Adds timestamp field to data payload
-"""
-
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 from marketpilot.adapters.base_adapter import BaseAdapter
@@ -32,10 +28,9 @@ class ResilientNewsAdapter(BaseAdapter):
                 },
             ]
 
-            # ✅ FIX: Add timestamp field at the data level
             result_data = {
                 "symbol": symbol,
-                "timestamp": datetime.now().isoformat(),  # ✅ Added
+                "timestamp": datetime.now().isoformat(),
                 "startdate": start_date.isoformat(),
                 "enddate": end_date.isoformat(),
                 "data": mock_news,
@@ -54,11 +49,6 @@ class ResilientNewsAdapter(BaseAdapter):
         except Exception as e:
             self.log_error(symbol, str(e))
             return {"success": False, "error": str(e), "vendor": self.vendor}
-
-
-"""
-Fixed Fundamental Adapter - Adds timestamp field to data payload
-"""
 
 
 class ResilientFundamentalAdapter(BaseAdapter):
@@ -90,10 +80,9 @@ class ResilientFundamentalAdapter(BaseAdapter):
                 "ratios": {"pe_ratio": 28.5, "debt_to_equity": 5.96, "roe": 0.196},
             }
 
-            # ✅ FIX: Add timestamp field at the data level
             result_data = {
                 "symbol": symbol,
-                "timestamp": datetime.now().isoformat(),  # ✅ Added
+                "timestamp": datetime.now().isoformat(),
                 "startdate": start_date.isoformat(),
                 "enddate": end_date.isoformat(),
                 "data": mock_fundamentals,
@@ -148,7 +137,7 @@ class FlexibleQualityAssuranceStage:
             if not record_data or len(record_data) == 0:
                 qa_issues.append("Empty data payload")
 
-            # ✅ Check 4: Flexible timestamp validation
+            #  Check 4: Flexible timestamp validation
             # Accept any of these timestamp fields
             timestamp_fields = [
                 "timestamp",

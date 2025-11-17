@@ -48,9 +48,9 @@ async def run_sample_operations(mode_name: str):
     log_dir = manager.get_log_dir()
     if log_dir.exists():
         for log_file in log_dir.rglob("*.jsonl"):
-            print(f"  ✅ {log_file}")
+            print(f"   {log_file}")
     else:
-        print("  ⚠️  No log directory yet")
+        print("    No log directory yet")
 
     print()
 
@@ -96,19 +96,19 @@ async def main():
 
     print()
     print("=" * 60)
-    print("✅ Demo complete!")
+    print(" Demo complete!")
     print("=" * 60)
     print()
     print("Key Benefits:")
-    print("  ✅ Isolated logging (logs vs logs_test)")
-    print("  ✅ Isolated data (data vs data_test)")
-    print("  ✅ No production data contamination")
-    print("  ✅ Test data preserved for debugging")
-    print("  ✅ Automatic in pytest via conftest.py")
+    print("   Isolated logging (logs vs logs_test)")
+    print("   Isolated data (data vs data_test)")
+    print("   No production data contamination")
+    print("   Test data preserved for debugging")
+    print("   Automatic in pytest via conftest.py")
     print()
     print("Note:")
-    print("  📁 Test directories preserved (not deleted)")
-    print("  🗑️  To cleanup: rm -rf logs_test/ data_test/")
+    print("   Test directories preserved (not deleted)")
+    print("    To cleanup: rm -rf logs_test/ data_test/")
     print()
 
     # Return to normal mode (don't cleanup)

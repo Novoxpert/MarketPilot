@@ -30,25 +30,25 @@ async def run_smoke_test():
             config_path="src/marketpilot/config/data_farm_config.yaml"
         )
 
-        print("\n✅ Data Farm initialized successfully!")
-        print(f"📊 Loaded {len(farm.get_adapters())} adapter(s)")
+        print("\n Data Farm initialized successfully!")
+        print(f" Loaded {len(farm.get_adapters())} adapter(s)")
 
         # Run smoke test with 3 assets
         test_symbols = ["AAPL", "NVDA", "TSLA"]
-        print(f"\n🧪 Running smoke test for: {', '.join(test_symbols)}")
+        print(f"\n Running smoke test for: {', '.join(test_symbols)}")
         print("=" * 60)
 
         results = await farm.run_smoke_test(test_symbols)
 
         # Print results
-        print("\n📋 SMOKE TEST RESULTS:")
+        print("\n SMOKE TEST RESULTS:")
         print(f"   Total Tests: {results['total_tests']}")
-        print(f"   ✅ Passed: {results['passed']}")
-        print(f"   ❌ Failed: {results['failed']}")
+        print(f"    Passed: {results['passed']}")
+        print(f"    Failed: {results['failed']}")
         print("\n" + "=" * 60)
 
         # Print details
-        print("\n📝 Detailed Results:")
+        print("\n Detailed Results:")
         for detail in results["details"]:
             status = detail["status"]
             adapter = detail["adapter_id"]
@@ -61,7 +61,7 @@ async def run_smoke_test():
 
         # Final verdict
         if results["failed"] == 0:
-            print("\n🎉 ALL TESTS PASSED - Environment is stable!")
+            print("\n ALL TESTS PASSED - Environment is stable!")
             log_event(
                 stage="pipeline",
                 block="run_script",
@@ -70,7 +70,7 @@ async def run_smoke_test():
                 extra=results,
             )
         else:
-            print(f"\n⚠️  {results['failed']} test(s) failed - Check logs for details")
+            print(f"\n  {results['failed']} test(s) failed - Check logs for details")
             log_event(
                 stage="pipeline",
                 block="run_script",
@@ -79,7 +79,7 @@ async def run_smoke_test():
                 extra=results,
             )
 
-        print("\n📝 Check logs/ directory or detailed logs")
+        print("\n Check logs/ directory or detailed logs")
         print("   - logs/pipeline/")
         print("   - logs/adapters/")
         print("   - logs/stages/")
@@ -92,7 +92,7 @@ async def run_smoke_test():
             level="ERROR",
             msg=f"Smoke test failed: {str(e)}",
         )
-        print(f"\n❌ Test execution failed: {e}")
+        print(f"\n Test execution failed: {e}")
         sys.exit(1)
 
 
