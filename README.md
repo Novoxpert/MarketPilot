@@ -1,5 +1,7 @@
 # MarketPilot — A Modern Python Platform for Financial Asset Management
 
+resolve an issue
+
 MarketPilot is an open-source Python platform for quantitative research, portfolio construction, and automated asset management.
 It enables quants and researchers to build resilient data pipelines, machine learning and reinforcement learning models, and policy-aware execution flows in a modular, production-ready environment.
 
