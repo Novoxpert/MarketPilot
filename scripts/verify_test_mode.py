@@ -93,7 +93,7 @@ def create_sample_data():
 
     # Create sample data file
     sample_data = {
-        "created_at": datetime.now().isoformat(),
+        "created_at": datetime.utcnow().isoformat(),
         "mode": manager.mode.value,
         "sample_records": [
             {"symbol": "AAPL", "price": 150.0},

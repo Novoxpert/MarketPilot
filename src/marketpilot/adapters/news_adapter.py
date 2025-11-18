@@ -6,10 +6,12 @@ from marketpilot.adapters.base_adapter import BaseAdapter
 class ResilientNewsAdapter(BaseAdapter):
     """News data adapter using AlphaVantage"""
 
-    async def _execute_ingest_internal(self, symbol: str) -> Dict[str, Any]:
+    async def _execute_ingest_internal(
+        self, symbol: str, start: datetime = None, end: datetime = None
+    ) -> Dict[str, Any]:
         """Ingest news data for a symbol"""
         try:
-            end_date = datetime.now()
+            end_date = datetime.utcnow()
             start_date = end_date - timedelta(days=1)
 
             # Mock news data with timestamp field
@@ -17,25 +19,28 @@ class ResilientNewsAdapter(BaseAdapter):
                 {
                     "title": f"{symbol} Stock Analysis",
                     "url": "https://example.com/news1",
-                    "published_at": datetime.now().isoformat(),
+                    "published_at": datetime.utcnow().isoformat(),
                     "sentiment": "positive",
                 },
                 {
                     "title": f"{symbol} Quarterly Earnings",
                     "url": "https://example.com/news2",
-                    "published_at": (datetime.now() - timedelta(hours=3)).isoformat(),
+                    "published_at": (
+                        datetime.utcnow() - timedelta(hours=3)
+                    ).isoformat(),
                     "sentiment": "neutral",
                 },
             ]
 
             result_data = {
                 "symbol": symbol,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "startdate": start_date.isoformat(),
                 "enddate": end_date.isoformat(),
                 "data": mock_news,
             }
 
+            print("eeeeeeeee")
             self.validate_schema(result_data)
             self.log_success(symbol, record_count=len(mock_news))
 
@@ -43,7 +48,7 @@ class ResilientNewsAdapter(BaseAdapter):
                 "success": True,
                 "data": result_data,
                 "vendor": self.vendor,
-                "ingested_at": datetime.now().isoformat(),
+                "ingested_at": datetime.utcnow().isoformat(),
             }
 
         except Exception as e:
@@ -57,7 +62,7 @@ class ResilientFundamentalAdapter(BaseAdapter):
     async def _execute_ingest_internal(self, symbol: str) -> Dict[str, Any]:
         """Ingest fundamental data for a symbol"""
         try:
-            end_date = datetime.now()
+            end_date = datetime.utcnow()
             start_date = end_date - timedelta(days=365)
 
             # Mock fundamental data
@@ -82,12 +87,13 @@ class ResilientFundamentalAdapter(BaseAdapter):
 
             result_data = {
                 "symbol": symbol,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "startdate": start_date.isoformat(),
                 "enddate": end_date.isoformat(),
                 "data": mock_fundamentals,
             }
 
+            print("wwwwwwwwww")
             self.validate_schema(result_data)
             self.log_success(symbol, record_count=1)
 
@@ -95,7 +101,7 @@ class ResilientFundamentalAdapter(BaseAdapter):
                 "success": True,
                 "data": result_data,
                 "vendor": self.vendor,
-                "ingested_at": datetime.now().isoformat(),
+                "ingested_at": datetime.utcnow().isoformat(),
             }
 
         except Exception as e:

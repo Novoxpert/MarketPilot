@@ -1,6 +1,6 @@
 poetry run python scripts/run_data_farm.py
 poetry run pytest tests/test_simple_stages.py -v
-# Market Pilot Unit Tests (MP-010)
+# Market Pilot Unit Tests
 
 ## Overview
 Comprehensive unit test suite for Market Pilot Data Farm covering adapters, stages, and complete pipeline integration.

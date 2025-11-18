@@ -1,5 +1,5 @@
 """
-Integration Tests for Complete Pipeline (MP-010)
+Integration Tests for Complete Pipeline
 Tests end-to-end pipeline execution
 """
 

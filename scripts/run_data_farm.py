@@ -1,105 +1,163 @@
 """
-Run script for ResilientDataFarm
-Entry point to execute the data pipeline and smoke tests
+Main execution script for ResilientDataFarm with start/end support for price adapters
 """
 
-from pathlib import Path
-import sys
 import asyncio
+import sys
+from pathlib import Path
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "src"))
 
 from marketpilot.data_farm.resilient_data_farm import ResilientDataFarm
-from marketpilot.utils.logger import log_event
 
 
-async def run_smoke_test():
-    """Main execution function"""
+async def main():
+    """Run complete data farm pipeline with optional start/end for price adapters"""
+
+    # Load environment variables
+    load_dotenv()
+
+    print("=" * 80)
+    print("🚀 MarketPilot - Resilient Data Farm")
+    print("=" * 80)
+
     try:
-        log_event(
-            stage="pipeline",
-            block="run_script",
-            level="INFO",
-            msg="Starting Data Farm smoke test",
-        )
-
         # Initialize Data Farm
-        farm = ResilientDataFarm(
-            config_path="src/marketpilot/config/data_farm_config.yaml"
-        )
+        print("\n📦 Initializing Data Farm...")
+        farm = ResilientDataFarm()
 
-        print("\n Data Farm initialized successfully!")
-        print(f" Loaded {len(farm.get_adapters())} adapter(s)")
+        # Get target symbols from config
+        config = farm.get_config()
+        symbols = config.get("target_symbols", ["BINANCE:BTCUSDT.P"])
 
-        # Run smoke test with 3 assets
-        test_symbols = ["AAPL", "NVDA", "TSLA"]
-        print(f"\n Running smoke test for: {', '.join(test_symbols)}")
-        print("=" * 60)
+        print("✅ Data Farm initialized")
+        print(f"   Symbols: {symbols}")
+        print(f"   Adapters: {len(farm.get_adapters())}")
 
-        results = await farm.run_smoke_test(test_symbols)
+        # Step 1: Run smoke test
+        print("\n" + "=" * 80)
+        print("🧪 Step 1: Running Smoke Test")
+        print("=" * 80)
 
-        # Print results
-        print("\n SMOKE TEST RESULTS:")
-        print(f"   Total Tests: {results['total_tests']}")
-        print(f"    Passed: {results['passed']}")
-        print(f"    Failed: {results['failed']}")
-        print("\n" + "=" * 60)
+        smoke_results = await farm.run_smoke_test(symbols)
 
-        # Print details
-        print("\n Detailed Results:")
-        for detail in results["details"]:
-            status = detail["status"]
-            adapter = detail["adapter_id"]
-            symbol = detail["symbol"]
-            print(f"   {status} - {adapter} - {symbol}")
-            if "error" in detail:
-                print(f"      Error: {detail['error']}")
+        print("\n📊 Smoke Test Results:")
+        print(f"   Total tests: {smoke_results['total_tests']}")
+        print(f"   ✅ Passed: {smoke_results['passed']}")
+        print(f"   ❌ Failed: {smoke_results['failed']}")
 
-        print("\n" + "=" * 60)
-
-        # Final verdict
-        if results["failed"] == 0:
-            print("\n ALL TESTS PASSED - Environment is stable!")
-            log_event(
-                stage="pipeline",
-                block="run_script",
-                level="INFO",
-                msg="Smoke test completed successfully",
-                extra=results,
+        # Show details
+        for detail in smoke_results["details"]:
+            status_icon = detail["status"]
+            print(
+                f"   {status_icon} {detail['adapter_id']} - {detail['symbol']}", end=""
             )
+            if "record_count" in detail:
+                print(f" ({detail['record_count']} records)")
+            elif "error" in detail:
+                print(f" - Error: {detail['error']}")
+            else:
+                print()
+
+        # Step 2: Run complete pipeline if smoke test passed
+        if smoke_results["failed"] == 0:
+            print("\n" + "=" * 80)
+            print("🏭 Step 2: Running Complete Pipeline")
+            print("=" * 80)
+
+            # FIX: Iterate over adapter objects, not keys
+            # Option 1: Use .values() to get adapter objects
+            for adapter in farm.get_adapters().values():
+                if adapter.schema_type == "price":
+                    end = datetime.utcnow()
+                    start = end - timedelta(minutes=10)  # Example: last 10 minutes
+                    print(
+                        f"\n📌 Fetching price data for {adapter.adapter_id} (last 10 min)"
+                    )
+                    result = await adapter.execute_ingest(
+                        symbols[0], start=start, end=end
+                    )
+                    print(f"Result: {result}")
+
+            # Run pipeline for other data types if needed
+            pipeline_results = await farm.run_complete_pipeline(
+                symbols=symbols, data_types=["price"]  # Expand as needed
+            )
+
+            print("\n✅ Pipeline Completed Successfully!")
+            print(f"   Duration: {pipeline_results.get('pipeline_duration', 0):.2f}s")
+            print(
+                f"   Records fetched: {pipeline_results['fetch_summary']['total_records']}"
+            )
+            print(
+                f"   Successful fetches: {pipeline_results['fetch_summary']['successful_fetches']}"
+            )
+            print(
+                f"   Failed fetches: {pipeline_results['fetch_summary']['failed_fetches']}"
+            )
+
+            # Show stage results
+            if "nan_stats" in pipeline_results:
+                print("\n📊 Pipeline Stages:")
+                print(
+                    f"   NaN Processing: {pipeline_results['nan_stats'].get('nan_count', 0)} NaNs fixed"
+                )
+
+            if "alignment_stats" in pipeline_results:
+                print(
+                    f"   Temporal Alignment: {pipeline_results['alignment_stats'].get('aligned_count', 0)} records aligned"
+                )
+
+            if "dedup_stats" in pipeline_results:
+                print(
+                    f"   Deduplication: {pipeline_results['dedup_stats'].get('duplicates_removed', 0)} duplicates removed"
+                )
+
+            if "qa_stats" in pipeline_results:
+                qa = pipeline_results["qa_stats"]
+                print(
+                    f"   Quality Assurance: {qa.get('qa_passed', 0)}/{qa.get('total_records', 0)} passed ({qa.get('pass_rate', '0%')})"
+                )
+
+            if "export_stats" in pipeline_results:
+                export = pipeline_results["export_stats"]
+                print("\n📁 Export Results:")
+                print(f"   Files exported: {len(export.get('exported_files', []))}")
+                print(f"   Records exported: {export.get('records_exported', 0)}")
+                print(
+                    f"   Symbols processed: {', '.join(export.get('symbols_processed', []))}"
+                )
+
+            # Validation results
+            validation = pipeline_results.get("validation_report", {})
+            if validation.get("validation_passed"):
+                print("\n✅ Schema Validation: PASSED")
+            else:
+                print("\n❌ Schema Validation: FAILED")
+                if validation.get("errors"):
+                    print("   Errors:")
+                    for error in validation["errors"]:
+                        print(f"   - {error}")
+
         else:
-            print(f"\n  {results['failed']} test(s) failed - Check logs for details")
-            log_event(
-                stage="pipeline",
-                block="run_script",
-                level="WARNING",
-                msg="Smoke test completed with failures",
-                extra=results,
-            )
-
-        print("\n Check logs/ directory or detailed logs")
-        print("   - logs/pipeline/")
-        print("   - logs/adapters/")
-        print("   - logs/stages/")
-        print("   - logs/errors/")
+            print("\n⚠️  Skipping pipeline execution due to smoke test failures")
+            print("   Please fix the errors above and try again")
 
     except Exception as e:
-        log_event(
-            stage="pipeline",
-            block="run_script",
-            level="ERROR",
-            msg=f"Smoke test failed: {str(e)}",
-        )
-        print(f"\n Test execution failed: {e}")
+        print(f"\n❌ Fatal Error: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
         sys.exit(1)
 
-
-def main():
-    """Main execution function"""
-    asyncio.run(run_smoke_test())
+    print("\n" + "=" * 80)
+    print("✅ Data Farm execution complete")
+    print("=" * 80)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

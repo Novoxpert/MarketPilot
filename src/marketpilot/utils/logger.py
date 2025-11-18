@@ -26,60 +26,76 @@ def _get_log_base_dir() -> Path:
 
 
 def _create_log_dirs():
-    """Create log directories if they don't exist"""
-    log_base = _get_log_base_dir()
+    base = _get_log_base_dir()
 
-    log_dirs = {
-        "pipeline": log_base / "pipeline",
-        "stages": log_base / "stages",
-        "adapters": log_base / "adapters",
-        "errors": log_base / "errors",
+    dirs = {
+        "pipeline": base / "pipeline",
+        "stages": base / "stages",
+        "adapters": base / "adapters",
+        "errors": base / "errors",
     }
 
-    for dir_path in log_dirs.values():
-        dir_path.mkdir(parents=True, exist_ok=True)
+    for d in dirs.values():
+        d.mkdir(parents=True, exist_ok=True)
 
-    return log_dirs
+    # Create pipeline/default file
+    (dirs["pipeline"] / "current.jsonl").touch(exist_ok=True)
+
+    # Predefined STAGES
+    stage_names = [
+        "health_check",
+        "data_collection",
+        "nan_processing",
+        "temporal_alignment",
+        "deduplication",
+        "quality_assurance",
+        "data_export",
+    ]
+    for s in stage_names:
+        (dirs["stages"] / f"{s}.jsonl").touch(exist_ok=True)
+
+    # Predefined ADAPTERS
+    adapter_names = [
+        "price_yfinance",
+        "news_alpha_vantage",
+        "fundamental_fmp",
+    ]
+    for a in adapter_names:
+        (dirs["adapters"] / f"{a}.jsonl").touch(exist_ok=True)
+
+    # Error file
+    (dirs["errors"] / "current.jsonl").touch(exist_ok=True)
+
+    return dirs
 
 
-def _get_log_file(category: str, stage: str = "", level: str = "INFO") -> Path:
-    """
-    Get log file path
+def _resolve_log_file(stage: str, block: str, level: str) -> Path:
+    base = _get_log_base_dir()
 
-    Args:
-        category: Log category (pipeline, stages, adapters, errors)
-        stage: Stage name (for special handling)
-        level: Log level
+    # ---- ERRORS ALWAYS GO HERE ----
+    if level in ("ERROR", "CRITICAL"):
+        return base / "errors" / "current.jsonl"
 
-    Returns:
-        Path to log file
-    """
-    log_base = _get_log_base_dir()
-    log_dir = log_base / category
+    # ---- ADAPTERS ----
+    if "adapter" in block.lower() or block.endswith("_adapter"):
+        adapter_file = base / "adapters" / f"{block}.jsonl"
+        return adapter_file
 
-    # Add mode prefix in test mode
-    # mode_manager = get_mode_manager()
-    # prefix = "test_" if mode_manager.is_test_mode else ""
+    # ---- STAGES ----
+    known_stage_names = [
+        "health_check",
+        "data_collection",
+        "nan_processing",
+        "temporal_alignment",
+        "deduplication",
+        "quality_assurance",
+        "data_export",
+    ]
+    if stage in known_stage_names:
+        return base / "stages" / f"{stage}.jsonl"
 
-    if category == "errors":
-        return log_dir / "current.jsonl"
-
-    elif category == "pipeline":
-        if stage == "initialization":
-            return log_dir / "initialization.jsonl"
-        return log_dir / "pipeline.jsonl"
-
-    elif category == "stages":
-        # Each stage gets its own file
-        # if stage:
-        #     return log_dir / "{stage}.jsonl"
-        return log_dir / "stages.jsonl"
-
-    elif category == "adapters":
-        return log_dir / "adapters.jsonl"
-
-    else:
-        return log_dir / f"{category}.jsonl"
+    # ---- DEFAULT PIPELINE ----
+    return base / "pipeline" / "current.jsonl"
 
 
 def log_event(
@@ -89,45 +105,10 @@ def log_event(
     msg: str = "",
     extra: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """
-    Log an event in JSONL format (mode-aware)
-
-    Args:
-        stage: Pipeline stage (e.g., 'ingestion', 'quality')
-        block: Component block (e.g., 'alphavantage_adapter', 'price_validator')
-        level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        msg: Log message
-        extra: Additional fields to include in log
-    """
-    # Create directories if needed
     _create_log_dirs()
 
-    # Determine category based on level and block
-    if stage == "initialization":
-        category = "pipeline"
-    elif level in ["ERROR", "CRITICAL"]:
-        category = "errors"
-    elif "adapter" in block.lower():
-        category = "adapters"
-    elif "stage" in block.lower() or stage.lower() in [
-        "ingestion",
-        "quality",
-        "storage",
-        "health_check",
-        "data_collection",
-        "nan_processing",
-        "temporal_alignment",
-        "deduplication",
-        "quality_assurance",
-        "data_export",
-    ]:
-        category = "stages"
-    else:
-        category = "pipeline"
-
-    # Build log entry
     log_entry = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.utcnow().isoformat(),
         "stage": stage,
         "block": block,
         "level": level,
@@ -143,26 +124,20 @@ def log_event(
     if extra:
         log_entry.update(extra)
 
-    # Write to JSONL file (append mode)
-    log_file = _get_log_file(category, stage, level)
+    # Select correct file
+    log_file = _resolve_log_file(stage, block, level)
+
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
 
-    # Also print to console for development (with mode indicator)
+    # Console output
     mode_prefix = "[TEST] " if mode_manager.is_test_mode else ""
     print(f"{mode_prefix}[{level}] {stage}.{block}: {msg}")
 
 
 def setup_logging(log_level: str = "INFO"):
-    """
-    Initialize logging system (mode-aware)
-
-    Args:
-        log_level: Minimum log level to capture
-    """
     _create_log_dirs()
 
-    # Configure Python's logging module
     logging.basicConfig(
         level=LOG_LEVELS.get(log_level.upper(), logging.INFO),
         format="%(asctime)s - %(levelname)s - %(message)s",
@@ -173,33 +148,25 @@ def setup_logging(log_level: str = "INFO"):
         "system",
         "logger",
         "INFO",
-        f"Logging system initialized in {mode_manager.mode.value} mode",
-        {"log_level": log_level, "mode": mode_manager.mode.value},
+        f"Logging initialized ({mode_manager.mode.value})",
+        {"log_level": log_level},
     )
 
 
 def clear_logs(category: Optional[str] = None):
-    """
-    Clear log files (useful for testing)
-
-    Args:
-        category: Specific category to clear, or None for all
-    """
-    log_base = _get_log_base_dir()
+    base = _get_log_base_dir()
 
     if category:
-        # Clear specific category
-        category_dir = log_base / category
-        if category_dir.exists():
-            for log_file in category_dir.glob("*.jsonl"):
-                log_file.unlink()
+        d = base / category
+        if d.exists():
+            for f in d.glob("*.jsonl"):
+                f.unlink()
     else:
-        # Clear all logs
-        for category in ["pipeline", "stages", "adapters", "errors"]:
-            category_dir = log_base / category
-            if category_dir.exists():
-                for log_file in category_dir.glob("*.jsonl"):
-                    log_file.unlink()
+        for folder in ("pipeline", "stages", "adapters", "errors"):
+            d = base / folder
+            if d.exists():
+                for f in d.glob("*.jsonl"):
+                    f.unlink()
 
 
 # Example usage
@@ -224,12 +191,13 @@ if __name__ == "__main__":
 
     print()
     print("Log files created:")
-    print("  logs/pipeline/pipeline.jsonl")
-    print("  logs/stages/stages.jsonl")
-    print("  logs/adapters/adapters.jsonl")
-    print("  logs/errors/errors.jsonl")
+    print("  logs/pipeline/current.jsonl")
+    print("  logs/stages/*.jsonl")
+    print("  logs/adapters/*.jsonl")
+    print("  logs/errors/current.jsonl")
     print()
     print("Test mode:")
-    print("  logs_test/pipeline/test_pipeline.jsonl")
-    print("  logs_test/stages/test_stages.jsonl")
-    print("  etc.")
+    print("  logs_test/pipeline/current.jsonl")
+    print("  logs_test/stages/*.jsonl")
+    print("  logs_test/adapters/*.jsonl")
+    print("  logs_test/errors/current.jsonl")

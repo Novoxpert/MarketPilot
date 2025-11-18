@@ -11,7 +11,9 @@ from marketpilot.adapters.base_adapter import BaseAdapter
 class ResilientFundamentalAdapter(BaseAdapter):
     """Fundamental data adapter using FMP"""
 
-    async def _execute_ingest_internal(self, symbol: str) -> Dict[str, Any]:
+    async def _execute_ingest_internal(
+        self, symbol: str, start: datetime = None, end: datetime = None
+    ) -> Dict[str, Any]:
         """
         Ingest fundamental data for a symbol
 
@@ -25,7 +27,7 @@ class ResilientFundamentalAdapter(BaseAdapter):
             # TODO: Replace with actual FMP API call
             # For now, return mock data
 
-            end_date = datetime.now()
+            end_date = datetime.utcnow()
             start_date = end_date - timedelta(days=365)
 
             # Mock fundamental data
@@ -50,12 +52,12 @@ class ResilientFundamentalAdapter(BaseAdapter):
 
             result_data = {
                 "symbol": symbol,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "startdate": start_date.isoformat(),
                 "enddate": end_date.isoformat(),
                 "data": mock_fundamentals,
             }
-
+            print("mmmmm")
             #  Validate against schema BEFORE returning
             self.validate_schema(result_data)
 
@@ -65,7 +67,7 @@ class ResilientFundamentalAdapter(BaseAdapter):
                 "success": True,
                 "data": result_data,
                 "vendor": self.vendor,
-                "ingested_at": datetime.now().isoformat(),
+                "ingested_at": datetime.utcnow().isoformat(),
             }
 
         except Exception as e:

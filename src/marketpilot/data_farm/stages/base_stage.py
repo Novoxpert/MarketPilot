@@ -36,7 +36,7 @@ class BaseStage(ABC):
         """
         # Generate unique operation ID
         self.operation_id = str(uuid.uuid4())[:8]
-        self.start_time = datetime.now()
+        self.start_time = datetime.utcnow()
 
         # Log stage start with operation_id
         log_event(
@@ -54,7 +54,7 @@ class BaseStage(ABC):
             # Execute the actual stage logic
             result = await self._process(data)
 
-            self.end_time = datetime.now()
+            self.end_time = datetime.utcnow()
             duration_ms = (self.end_time - self.start_time).total_seconds() * 1000
 
             # Count records processed
@@ -78,7 +78,7 @@ class BaseStage(ABC):
             return result
 
         except Exception as e:
-            self.end_time = datetime.now()
+            self.end_time = datetime.utcnow()
             duration_ms = (self.end_time - self.start_time).total_seconds() * 1000
 
             # Log stage failure with error details

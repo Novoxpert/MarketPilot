@@ -45,7 +45,7 @@ class TestLogger:
     def test_log_entry_format(self):
         """Ensure log entry JSON format is correct"""
 
-        test_msg = f"Format test at {datetime.now().isoformat()}"
+        test_msg = f"Format test at {datetime.utcnow().isoformat()}"
 
         log_event(
             stage="test_format",
@@ -152,7 +152,7 @@ class TestLogger:
         """Ensure extra fields persist"""
 
         extra = {"symbol": "AAPL", "price": 150.5, "volume": 123456}
-        test_msg = f"Extra field test at {datetime.now().isoformat()}"
+        test_msg = f"Extra field test at {datetime.utcnow().isoformat()}"
 
         log_event(
             stage="test_extra",
@@ -183,7 +183,7 @@ class TestLogger:
         """Ensure test mode adds indicator field"""
 
         manager = get_mode_manager()
-        test_msg = f"Test mode indicator at {datetime.now().isoformat()}"
+        test_msg = f"Test mode indicator at {datetime.utcnow().isoformat()}"
 
         log_event(
             stage="test_mode_check",

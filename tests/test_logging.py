@@ -8,7 +8,14 @@ import json
 from datetime import datetime
 from marketpilot.utils.logger import log_event
 from marketpilot.utils.log_validator import LogValidator
-from marketpilot.utils.mode_manager import get_mode_manager
+from marketpilot.utils.mode_manager import (
+    get_mode_manager,
+    set_test_mode,
+    set_normal_mode,
+    reset_mode,
+    is_test_mode,
+    AppMode,
+)
 
 
 class TestLoggingEnhancements:
@@ -115,7 +122,7 @@ class TestLogValidator:
     def test_validate_valid_log_entry(self):
         """Test validation of valid log entry"""
         valid_entry = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
             "stage": "test_stage",
             "block": "test_block",
             "level": "INFO",
@@ -130,7 +137,7 @@ class TestLogValidator:
     def test_validate_against_schema(self):
         """Test JSON schema validation"""
         valid_entry = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
             "stage": "test",
             "block": "test",
             "level": "INFO",
@@ -145,7 +152,7 @@ class TestLogValidator:
     def test_schema_validation_invalid_type(self):
         """Test schema validation catches type errors"""
         invalid_entry = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
             "stage": "test",
             "block": "test",
             "level": 123,  #  Should be string
@@ -160,7 +167,7 @@ class TestLogValidator:
     def test_validate_missing_fields(self):
         """Test detection of missing required fields"""
         invalid_entry = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
             "stage": "test_stage",
             # Missing: block, level, message
         }
@@ -174,7 +181,7 @@ class TestLogValidator:
     def test_validate_invalid_log_level(self):
         """Test detection of invalid log level"""
         invalid_entry = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
             "stage": "test_stage",
             "block": "test_block",
             "level": "INVALID_LEVEL",
@@ -187,7 +194,7 @@ class TestLogValidator:
     def test_validate_stage_log_metrics(self):
         """Test validation of stage-specific metrics"""
         log_entry = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
             "stage": "test_stage",
             "block": "stage",
             "level": "INFO",
@@ -206,7 +213,7 @@ class TestLogValidator:
     def test_validate_stage_log_missing_metrics(self):
         """Test detection of missing stage metrics"""
         log_entry = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
             "stage": "test_stage",
             "block": "stage",
             "level": "INFO",
@@ -233,7 +240,7 @@ class TestLogValidator:
         with open(test_log, "w", encoding="utf-8") as f:
             # Valid entry
             valid_entry = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "stage": "test",
                 "block": "test",
                 "level": "INFO",
@@ -265,7 +272,7 @@ class TestLogValidator:
         with open(test_log, "w", encoding="utf-8") as f:
             # Valid entry
             valid_entry = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "stage": "test",
                 "block": "test",
                 "level": "INFO",
@@ -379,6 +386,122 @@ class TestIntegratedLogging:
             )
 
         assert completion_log_found, "Did not detect enhanced completion log entry"
+
+
+# mode manager tests
+
+
+class TestModeManager:
+    """Comprehensive tests for mode manager"""
+
+    def test_mode_manager_singleton(self):
+        """Test mode manager is singleton"""
+        manager1 = get_mode_manager()
+        manager2 = get_mode_manager()
+        assert manager1 is manager2
+
+    def test_mode_manager_initial_mode(self):
+        """Test initial mode is captured correctly"""
+        # Reset to ensure clean state
+        reset_mode()
+
+        manager = get_mode_manager()
+
+        # The current mode should match the initial mode after reset
+        assert manager.mode == manager._instance._initial_mode
+
+        # Initial mode should be either NORMAL or TEST depending on environment
+        assert manager._instance._initial_mode in [AppMode.NORMAL, AppMode.TEST]
+
+    def test_mode_manager_set_test_mode(self):
+        """Test setting test mode"""
+        set_test_mode()
+        assert is_test_mode() is True
+
+        manager = get_mode_manager()
+        assert manager.is_test_mode is True
+        assert manager.is_normal_mode is False
+
+        reset_mode()
+
+    def test_mode_manager_set_normal_mode(self):
+        """Test setting normal mode"""
+        set_normal_mode()
+        manager = get_mode_manager()
+        assert manager.is_normal_mode is True
+        assert manager.is_test_mode is False
+
+    def test_mode_manager_reset_mode(self):
+        """Test reset mode"""
+        set_test_mode()
+        reset_mode()
+        # Should return to initial mode
+
+    def test_mode_manager_get_log_dir(self):
+        """Test get_log_dir based on mode"""
+        set_test_mode()
+        manager = get_mode_manager()
+        assert str(manager.get_log_dir()) == "logs_test"
+
+        set_normal_mode()
+        assert str(manager.get_log_dir()) == "logs"
+
+        reset_mode()
+
+    def test_mode_manager_get_data_dir(self):
+        """Test get_data_dir based on mode"""
+        set_test_mode()
+        manager = get_mode_manager()
+        assert str(manager.get_data_dir()) == "data_test"
+
+        set_normal_mode()
+        assert str(manager.get_data_dir()) == "data"
+
+        reset_mode()
+
+    def test_mode_manager_get_config_file(self):
+        """Test get_config_file"""
+        manager = get_mode_manager()
+        config = manager.get_config_file()
+        assert "data_farm_config.yaml" in str(config)
+
+    def test_mode_manager_get_db_name(self):
+        """Test get_db_name"""
+        set_test_mode()
+        manager = get_mode_manager()
+        assert manager.get_db_name() == "marketpilot_test"
+
+        set_normal_mode()
+        assert manager.get_db_name() == "marketpilot"
+
+        reset_mode()
+
+    def test_mode_manager_get_env_prefix(self):
+        """Test get_env_prefix"""
+        set_test_mode()
+        manager = get_mode_manager()
+        assert manager.get_env_prefix() == "TEST_"
+
+        set_normal_mode()
+        assert manager.get_env_prefix() == ""
+
+        reset_mode()
+
+    def test_mode_manager_get_all_paths(self):
+        """Test get_all_paths"""
+        manager = get_mode_manager()
+        paths = manager.get_all_paths()
+
+        assert "log_dir" in paths
+        assert "data_dir" in paths
+        assert "config_file" in paths
+        assert "output_dir" in paths
+
+    def test_mode_manager_repr(self):
+        """Test __repr__ method"""
+        manager = get_mode_manager()
+        repr_str = repr(manager)
+        assert "ModeManager" in repr_str
 
 
 if __name__ == "__main__":

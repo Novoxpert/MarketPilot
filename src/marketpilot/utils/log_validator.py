@@ -259,7 +259,7 @@ class LogValidator:
             Complete validation report
         """
         report = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
             "log_directory": str(log_dir),
             "overall_valid": True,
             "files_validated": [],
