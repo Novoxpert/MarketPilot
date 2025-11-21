@@ -15,7 +15,7 @@ def potential_field_evaluator_agent(
 	config: AgentConfig,
 	tools: Dict[str, ToolCallable]
 ) -> PotentialState:
-    
+
 	state.get("logs").append(f"Potential field evaluator executing")
 	
 	# TODO - use required contents from older messages 

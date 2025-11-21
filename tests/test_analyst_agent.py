@@ -1,9 +1,9 @@
 """
-Nelishka Tests — Analyst Agent Configuration
+Marketpilot Tests — Analyst Agent Configuration
 ============================================
 
 This module contains unit tests for validating the configuration of the
-`analyst.yml` agent definition used in the Nelishka platform.
+`analyst.yml` agent definition used in the Marketpilot platform.
 
 The tests ensure that the configuration file:
 - Exists in the expected directory.

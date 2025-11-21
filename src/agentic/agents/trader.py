@@ -16,7 +16,7 @@ def trader_agent(
 	config: AgentConfig,
 	tools: Dict[str, ToolCallable]
 ) -> TraderState:
-    
+
 	state.get("logs").append(f"Trader executing")
 	
 	# TODO - create your own llm based agent

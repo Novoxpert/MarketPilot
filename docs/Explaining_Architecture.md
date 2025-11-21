@@ -198,10 +198,10 @@ src/cli/
 ### **Example Commands**
 
 ```
-nelishka list targets
-nelishka run agent analyst
-nelishka run target trading_intelligence_workflow
-nelishka visualize graph trading_intelligence_workflow
+marketpilot list targets
+marketpilot run agent analyst
+marketpilot run target trading_intelligence_workflow
+marketpilot visualize graph trading_intelligence_workflow
 ```
 
 ---
@@ -211,7 +211,7 @@ nelishka visualize graph trading_intelligence_workflow
 Below is the full process when a user runs a graph, e.g.:
 
 ```
-nelishka run target trading_intelligence_workflow
+marketpilot run target trading_intelligence_workflow
 ```
 
 ### **Step 1 — CLI Parses Command**
@@ -319,8 +319,8 @@ CLI prints:
 2. Run:
 
 ```
-nelishka visualize graph NEW_WORKFLOW
-nelishka run target NEW_WORKFLOW
+marketpilot visualize graph NEW_WORKFLOW
+marketpilot run target NEW_WORKFLOW
 ```
 
 ---

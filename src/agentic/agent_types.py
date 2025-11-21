@@ -5,7 +5,7 @@ import operator
 
 
 class AgentState(TypedDict, total=False):
-    messages: Annotated[List[BaseMessage], operator.add]
-    data: Dict[str, Any]
-    logs: List[str]
-    documents: List[str]
+	messages: Annotated[List[BaseMessage], operator.add]
+	data: Dict[str, Any]
+	logs: List[str]
+	documents: List[str]

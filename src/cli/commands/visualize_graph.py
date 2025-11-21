@@ -1,8 +1,8 @@
 """
-Nelishka CLI — Visualize Workflow (Dynamic)
+Marketpilot CLI — Visualize Workflow (Dynamic)
 ===================================================================
 
-This module implements the `visualize-graph` command for the Nelishka Interactive CLI.
+This module implements the `visualize-graph` command for the Marketpilot Interactive CLI.
 It dynamically loads a workflow definition from YAML and visualizes it as a
 colorized, arrow-connected Rich tree.
 
@@ -19,7 +19,7 @@ Features:
 
 Usage:
 ------
-From the Nelishka interactive console:
+From the Marketpilot interactive console:
 
     λ visualize-graph trading_intelligence_workflow
 

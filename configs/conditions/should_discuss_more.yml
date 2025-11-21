@@ -1,0 +1,6 @@
+condition:
+  name: should_discuss_more
+  type: Condition
+  version: 1.0
+  description: >
+    A routing function that analyzes the most recent agent message to determine whether further evaluation is required before reaching a trading decision. It inspects contextual cues, references, and analytical content within the message to dynamically choose the next agent in the workflow. By identifying whether the discussion pertains to risk-related considerations or opportunity-driven insights, it ensures that information is directed either to the RiskEvaluator or directly to the Trader. This enables adaptive workflow branching, optimized decision sequencing, and context-aware progression across the multi-agent pipeline.

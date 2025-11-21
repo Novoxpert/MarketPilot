@@ -18,7 +18,7 @@ def data_loader_agent(
 	config: AgentConfig,
 	tools: Dict[str, ToolCallable]
 ) -> DataLoaderState:
-    
+	
 	state.get("logs").append(f"Data loader executing")
 	
 	# query = state["messages"][-1].content
@@ -29,8 +29,8 @@ def data_loader_agent(
 	# state["documents"] = [doc.page_content for doc in docs]
 			
 	state \
-  	.setdefault("data", {}) \
-    .setdefault("data_loader", []) \
-    .append("fetched some raw data from remote")
+		.setdefault("data", {}) \
+		.setdefault("data_loader", []) \
+		.append("fetched some raw data from remote")
 
 	return state

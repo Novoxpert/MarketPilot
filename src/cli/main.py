@@ -1,8 +1,8 @@
 """
-Nelishka Interactive CLI
+Marketpilot Interactive CLI
 ========================
 
-This module provides the interactive command-line interface for the Nelishka platform.
+This module provides the interactive command-line interface for the Marketpilot platform.
 It uses the `rich` library for enhanced console output and supports a variety of commands
 to interact with agents, tools, and graph workflows.
 
@@ -23,7 +23,7 @@ Usage:
 ------
 Run the CLI entry point (usually installed via setup.py) or execute directly:
 
-    $ nelishka-cli
+    $ marketpilot-cli
 
 Example session:
 ----------------
@@ -53,7 +53,7 @@ def show_banner():
     """Display a welcome banner at the start of the interactive session."""
     console.print(
         Padding(Panel.fit(
-            "[bold cyan]Welcome to Nelishka Interactive CLI[/bold cyan]\n"
+            "[bold cyan]Welcome to Marketpilot Interactive CLI[/bold cyan]\n"
             "Type [green]help[/green] to see available commands or [red]exit[/red] to quit.",
             border_style="magenta",
         ), (0, 0, 1, 0))
@@ -78,7 +78,7 @@ def show_help():
     )
 
 def main():
-    """Start the Nelishka interactive console and handle user commands."""
+    """Start the Marketpilot interactive console and handle user commands."""
     show_banner()
 
     while True:

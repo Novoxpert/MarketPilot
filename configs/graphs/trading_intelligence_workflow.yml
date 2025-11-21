@@ -62,31 +62,26 @@ edges:
       sentiment or trend detection.
 
   - from: analyst
-    to: risk_evaluator
-    description: >
-      Sends analytical insights and forecasts to the RiskAssessor for
-      probability and exposure evaluation.
-
-  - from: analyst
     to: potential_field_evaluator
     description: >
       Sends structured insights, trend analysis, and detected patterns to the
       OpportunityEvaluator to help identify and score potential trading opportunities.
 
   - from: risk_evaluator
-    to: trader
+    to: potential_field_evaluator
     description: >
       Provides the Trader with evaluated risk metrics and recommended
       exposure limits, ensuring trades align with risk tolerance.
-
-  - from: potential_field_evaluator
-    to: trader
-    description: >
-      Sends the Trader high-potential opportunities scored for expected
-      returns, guiding strategy execution based on opportunity analysis.
 
   - from: trader
     to: feature_store
     description: >
       Logs trade execution details, outcomes, and performance metrics
       into the FeatureStore for future analysis and model improvement.
+
+conditional_edges:
+  - from: potential_field_evaluator
+    condition: should_discuss_more
+    to:
+      - risk_evaluator
+      - trader

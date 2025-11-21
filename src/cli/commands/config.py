@@ -1,12 +1,12 @@
 """
-Nelishka CLI — Configuration Viewer
+Marketpilot CLI — Configuration Viewer
 ===================================
 
-This module provides a command for displaying the contents of the Nelishka
+This module provides a command for displaying the contents of the Marketpilot
 configuration file (`config.yml`) in a structured, colorized table format
 using the `rich` library.
 
-It is part of the Nelishka Interactive CLI suite and is typically invoked via
+It is part of the Marketpilot Interactive CLI suite and is typically invoked via
 the `show-config` command.
 
 Features:
@@ -17,7 +17,7 @@ Features:
 
 Usage:
 ------
-From the Nelishka interactive console:
+From the Marketpilot interactive console:
 
     λ show-config
 
@@ -50,7 +50,7 @@ CONFIG_PATH = Path("config.yml")
 
 def show():
     """
-    Display the contents of the Nelishka configuration file in a rich-formatted table.
+    Display the contents of the Marketpilot configuration file in a rich-formatted table.
 
     The function:
     - Checks for the presence of `config.yml` in the current directory.
@@ -76,5 +76,5 @@ def show():
         for k, v in values.items():
             table.add_row(f"  {k}", str(v))
 
-    console.rule(f"[bold cyan]Graph: Nelishka Configuration[/bold cyan]")
+    console.rule(f"[bold cyan]Graph: Marketpilot Configuration[/bold cyan]")
     console.print(Padding(table, (1, 0, 1, 0)))

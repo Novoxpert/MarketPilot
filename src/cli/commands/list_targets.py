@@ -1,9 +1,9 @@
 """
-Nelishka CLI — List Targets
+Marketpilot CLI — List Targets
 ===========================
 
 This module provides the implementation of the `list-targets` command for the
-Nelishka Interactive CLI. It displays all available components — agents, tools,
+Marketpilot Interactive CLI. It displays all available components — agents, tools,
 and graphs — in a formatted table with their names, types, and brief descriptions.
 
 It uses the shared configuration loader utility (`utils.config_loader`) to load
@@ -18,7 +18,7 @@ Features:
 
 Usage:
 ------
-From the Nelishka interactive console:
+From the Marketpilot interactive console:
 
     λ list-targets
 

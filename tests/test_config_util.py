@@ -1,5 +1,5 @@
 """
-Nelishka Tests — Configuration Loader
+Marketpilot Tests — Configuration Loader
 =====================================
 
 This module contains unit tests for validating the `load_config` function

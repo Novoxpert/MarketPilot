@@ -17,7 +17,7 @@ def risk_evaluator_agent(
 	config: AgentConfig,
 	tools: Dict[str, ToolCallable]
 ) -> RiskEvaluatorState:
-    
+
 	state.get("logs", []).append(f"Risk evaluator executing")
 	
 	# TODO - use query from older messages

@@ -16,7 +16,7 @@ def feature_store_agent(
 	config: AgentConfig,
 	tools: Dict[str, ToolCallable]
 ) -> FeatureStoreState:
-    
+
 	state.get("logs").append(f"Feature store executing")
 	
 	# llm = ChatOpenAI(model="gpt-4", temperature=0.2)

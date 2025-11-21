@@ -1,8 +1,8 @@
 """
-Nelishka CLI — Run Agent
+Marketpilot CLI — Run Agent
 ========================
 
-This module implements the `run-agent` command for the Nelishka Interactive CLI.
+This module implements the `run-agent` command for the Marketpilot Interactive CLI.
 It simulates the execution of an agent’s workflow and provides visual feedback
 through a progress bar using the `rich` library.
 
@@ -19,7 +19,7 @@ Features:
 
 Usage:
 ------
-From the Nelishka interactive console:
+From the Marketpilot interactive console:
 
     λ run <target>/<name>
 

@@ -24,3 +24,10 @@ class ToolConfig(BaseModel):
     type: str
     version: float
     description: str
+    
+
+class ConditionConfig(BaseModel):
+    name: str
+    type: str
+    version: float
+    description: str

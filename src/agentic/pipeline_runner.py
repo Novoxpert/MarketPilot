@@ -1,5 +1,7 @@
 from langchain_core.messages import HumanMessage
-from agentic.graph_builder import compiled_graph
+from agentic.graph_builder import build_dynamic_graph
+
+compiled_graph = build_dynamic_graph("trading_intelligence_workflow")
 
 final_state = compiled_graph.invoke({ # type: ignore
   "messages": [

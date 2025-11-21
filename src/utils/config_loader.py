@@ -1,5 +1,5 @@
 """
-Configuration management utilities for Nelishka.
+Configuration management utilities for Marketpilot.
 
 This module provides functions to:
 - Load, save, and update YAML configuration files
@@ -23,16 +23,19 @@ class ConfigType(Enum):
         AGENT: Agent configuration file
         GRAPH: Graph configuration file
         TOOL: Tool configuration file
+        CONDITION: Conditional edge configuration file
     """
     AGENT = "agent"
     GRAPH = "graph"
     TOOL = "tool"
+    CONDITION = "condition"
 
 def make_config_path(config_type: ConfigType) -> Path:
     CONFIG_DIR = Path("configs")
     AGENT_DIR = CONFIG_DIR / "agents"
     GRAPH_DIR = CONFIG_DIR / "graphs"
     TOOL_DIR = CONFIG_DIR / "tools"
+    CONDITION_DIR = CONFIG_DIR / "conditions"
     
     if config_type == ConfigType.AGENT:
         return AGENT_DIR
@@ -40,6 +43,8 @@ def make_config_path(config_type: ConfigType) -> Path:
         return GRAPH_DIR
     elif config_type == ConfigType.TOOL:
         return TOOL_DIR
+    elif config_type == ConfigType.CONDITION:
+        return CONDITION_DIR
     else:
         raise ValueError(f"Invalid config type: {config_type}")
     
@@ -49,7 +54,7 @@ def make_file_path(config_type: ConfigType, file_name: str) -> Path:
     Generate the full file path for a given configuration type and file name.
 
     Args:
-        config_type (ConfigType): The type of configuration (AGENT or GRAPH or TOOL).
+        config_type (ConfigType): The type of configuration (AGENT or GRAPH or TOOL or CONDITION).
         file_name (str): The base name of the config file (without extension).
 
     Returns:
@@ -62,6 +67,7 @@ def make_file_path(config_type: ConfigType, file_name: str) -> Path:
     AGENT_DIR = CONFIG_DIR / "agents"
     GRAPH_DIR = CONFIG_DIR / "graphs"
     TOOL_DIR = CONFIG_DIR / "tools"
+    CONDITION_DIR = CONFIG_DIR / "conditions"
 
     if config_type == ConfigType.AGENT:
         return AGENT_DIR / f"{file_name}.yml"
@@ -69,6 +75,8 @@ def make_file_path(config_type: ConfigType, file_name: str) -> Path:
         return GRAPH_DIR / f"{file_name}.yml"
     elif config_type == ConfigType.TOOL:
         return TOOL_DIR / f"{file_name}.yml"
+    elif config_type == ConfigType.CONDITION:
+        return CONDITION_DIR / f"{file_name}.yml"
     else:
         raise ValueError(f"Invalid config type: {config_type}")
 
