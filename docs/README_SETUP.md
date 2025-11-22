@@ -44,10 +44,6 @@ poetry run pytest
 
 ## Get API Keys
 
-1. **Alpha Vantage**: https://www.alphavantage.co/support/#api-key
-2. **FMP**: https://site.financialmodelingprep.com/developer/docs
-3. **Finnhub**: https://finnhub.io/register
-
 Edit `.env` and replace placeholders with your actual keys.
 
 ---
@@ -105,8 +101,6 @@ poetry shell  # Activate environment first
 **API keys not loading:**
 - Check `.env` exists in project root
 - No spaces around `=` in `.env`
-- Test: `poetry run python -c "from config import config; print(config.alphavantage_api_key)"`
-
 ---
 
 ## Verify Installation

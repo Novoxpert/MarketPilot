@@ -60,7 +60,7 @@ pytest tests/ -m smoke
 ## Test Files Description
 
 ### `test_adapters.py`
-Tests for data adapters (YFinance, AlphaVantage, FMP):
+Tests for data adapters:
 - ✅ Adapter initialization
 - ✅ Successful data ingestion
 - ✅ Schema validation

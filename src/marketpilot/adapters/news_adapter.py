@@ -4,7 +4,7 @@ from marketpilot.adapters.base_adapter import BaseAdapter
 
 
 class ResilientNewsAdapter(BaseAdapter):
-    """News data adapter using AlphaVantage"""
+    """News data adapter"""
 
     async def _execute_ingest_internal(
         self, symbol: str, start: datetime = None, end: datetime = None

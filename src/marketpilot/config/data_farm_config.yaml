@@ -16,18 +16,19 @@ adapters:
   # Price Data Adapter
   - id: price_internal_001       # Used in data_collection
     type: price
-    vendor: internal_api          # Used in data_collection
+    vendor: internal_price_api          # Used in data_collection
     cadence: 1min
     schema_type: price
     # start: optional datetime     # Can be provided dynamically at runtime
     # end: optional datetime       # Can be provided dynamically at runtime
 
   # News Data Adapter (commented out for now)
-  - id: news_alphavantage_001
-    type: news
-    vendor: alphavantage
-    cadence: 15min
-    schema_type: news
+  - id: "news_internal_001"
+    type: "news"
+    vendor: "internal_news_api"
+    cadence: "5min"
+    schema_type: "news"
+    limit: 100
 
   # Fundamental Data Adapter (commented out for now)
   - id: fundamental_fmp_001
