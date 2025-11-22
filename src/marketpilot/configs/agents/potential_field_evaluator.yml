@@ -1,0 +1,23 @@
+agent:
+  name: potential_field_evaluator
+  version: 1.0
+  description: >
+    The "potential_field_evaluator" agent identifies and scores trading opportunities based
+    on risk-adjusted potential returns, trends, and sentiment analysis.
+
+  max_steps: 10
+  logging_level: DEBUG
+
+  tools:
+    - name: opportunity_scorer
+      type: Tool
+      tool_ref: opportunity_scorer
+      description: >
+        Evaluates market opportunities using insights, risk metrics, and
+        macroeconomic indicators to generate a risk-adjusted score for each
+        potential trade.
+
+  decision_logic: >
+    Receives insights from Analyst and risk metrics from RiskAssessment,
+    applies opportunity_scorer to rank and score trading opportunities,
+    then sends top-scoring opportunities to Trader. Logs decisions at DEBUG level.

@@ -1,0 +1,8 @@
+tool:
+  name: trade_executor
+  type: Tool
+  version: 1.0
+  description: >
+    Executes trades on configured exchanges using algorithmic strategies,
+    position management, and compliance with risk thresholds set by
+    RiskAssessment and Potential agents.

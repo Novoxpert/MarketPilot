@@ -1,0 +1,8 @@
+tool:
+  name: data_ingestor
+  type: Tool
+  version: 1.0
+  description: >
+    Connects to multiple data sources including APIs, streaming platforms,
+    and file-based sources. Ingests raw data into the workflow while performing
+    basic validation and normalization for downstream processing.

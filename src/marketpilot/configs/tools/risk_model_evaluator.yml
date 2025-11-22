@@ -1,0 +1,8 @@
+tool:
+  name: risk_model_evaluator
+  type: Tool
+  version: 1.0
+  description: >
+    Computes risk scores and probability metrics based on analytical insights,
+    historical data, and market trends. Produces risk-adjusted recommendations
+    for trading decisions.

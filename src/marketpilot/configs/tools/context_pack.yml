@@ -1,0 +1,8 @@
+tool:
+  name: context_pack
+  type: Tool
+  version: 1.0
+  description: >
+    A tool that synthesizes incoming data, market references, and
+    relevant context into a structured context package. Includes key insights,
+    detected patterns, relationships, and source references for downstream agents.

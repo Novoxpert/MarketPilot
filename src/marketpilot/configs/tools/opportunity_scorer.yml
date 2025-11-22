@@ -1,0 +1,8 @@
+tool:
+  name: opportunity_scorer
+  type: Tool
+  version: 1.0
+  description: >
+    Evaluates trading opportunities using inputs from Analyst and RiskAssessment
+    agents. Generates risk-adjusted scores and rankings for potential trades
+    based on multi-factor analysis.

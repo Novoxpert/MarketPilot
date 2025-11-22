@@ -1,0 +1,30 @@
+agent:
+  name: data_loader
+  version: 1.0
+  description: >
+    The "data_loader" agent ingests raw financial and market data from multiple
+    sources including streams, APIs, and data lakes. It normalizes and cleans
+    data for downstream agents.
+
+  max_steps: 10
+  logging_level: DEBUG
+
+  tools:
+    - name: data_ingestor
+      type: Tool
+      tool_ref: data_ingestor
+      description: >
+        Tool that connects to multiple sources (API, streaming, file-based)
+        and ingests raw data into the workflow with basic validation and
+        normalization.
+
+    - name: market_price
+      type: Tool
+      tool_ref: market_price_fetcher
+      description: >
+        Retrieves real-time market prices and indicators to enrich analysis.
+
+  decision_logic: >
+    The agent fetches data from all configured sources, applies normalization
+    and cleaning rules, and passes structured data to downstream agents.
+    Logs every ingestion step at DEBUG level.

@@ -79,13 +79,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-data/
 .vscode
 
 .history
 
 # output
-data/
 data_test/
 data_farm_exports/
 .env

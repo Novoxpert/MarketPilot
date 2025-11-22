@@ -1,0 +1,22 @@
+agent:
+  name: feature_store
+  version: 1.0
+  description: >
+    The "feature_store" agent persists analytical features, risk metrics, and
+    trade performance data for retrieval, analysis, and model retraining.
+
+  max_steps: 10
+  logging_level: DEBUG
+
+  tools:
+    - name: feature_persistor
+      type: Tool
+      tool_ref: feature_persistor
+      description: >
+        Stores structured features, metrics, and trade outcomes in a centralized
+        repository, indexed for fast retrieval and downstream ML tasks.
+
+  decision_logic: >
+    Receives features, insights, risk metrics, and trade data from upstream
+    agents and persists them reliably in the store, ensuring proper indexing
+    and versioning. Logs all operations at DEBUG level.

@@ -1,0 +1,30 @@
+agent:
+  name: trader
+  version: 1.0
+  description: >
+    The "trader" agent executes trades based on validated opportunities and
+    risk constraints. It applies adaptive strategies and algorithmic execution
+    to optimize performance.
+
+  max_steps: 10
+  logging_level: DEBUG
+
+  tools:
+    - name: trade_executor
+      type: Tool
+      tool_ref: trade_executor
+      description: >
+        Executes trades on configured exchanges using adaptive algorithms,
+        position management, and risk-based limits.
+
+    - name: portfolio_monitor
+      type: Tool
+      tool_ref: portfolio_monitor
+      description: >
+        Tracks current positions, P&L, and risk exposure to ensure compliance
+        with limits and strategy rules.
+
+  decision_logic: >
+    Receives risk-adjusted trade opportunities, validates them against current
+    portfolio and risk limits using portfolio_monitor, then executes trades
+    via trade_executor. Logs all executions and outcomes at DEBUG level.

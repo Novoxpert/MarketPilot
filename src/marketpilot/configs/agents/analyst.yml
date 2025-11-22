@@ -1,0 +1,27 @@
+agent:
+  name: analyst
+  version: 1.0
+  description: >
+    The "analyst" agent orchestrates analytical workflows on incoming data.
+    It gathers data, relevant references, and market information, then uses
+    an LLM to generate a consolidated context package containing insights
+    for downstream processing.
+
+  max_steps: 10
+  logging_level: DEBUG
+
+  tools:
+    - name: context_pack
+      type: Tool
+      tool_ref: context_pack
+      description: >
+        A tool that synthesizes incoming data, references, and market
+        information into a structured context package. Includes key insights,
+        relationships, and source references for reporting, reasoning, or
+        downstream agents.
+
+  decision_logic: >
+    The analyst agent first collects raw data and relevant references,
+    optionally fetching market prices via the market_price tool. It then
+    invokes the context_pack tool to generate a consolidated context
+    package. Logging at DEBUG level tracks all intermediate steps and outputs.

@@ -1,0 +1,23 @@
+agent:
+  name: risk_evaluator
+  version: 1.0
+  description: >
+    The "risk_evaluator" agent evaluates potential market and operational risks
+    using analytical insights. It produces risk scores, confidence metrics,
+    and exposure recommendations.
+
+  max_steps: 10
+  logging_level: DEBUG
+
+  tools:
+    - name: risk_model
+      type: Tool
+      tool_ref: risk_model_evaluator
+      description: >
+        Computes risk metrics and probability scores based on incoming analytical
+        insights, market data, and historical patterns.
+
+  decision_logic: >
+    Receives insights from the analyst, applies risk_model to calculate
+    risk scores and confidence intervals, then forwards evaluated risk metrics
+    to Potential and Trader agents. Logs all intermediate computations.

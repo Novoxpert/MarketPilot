@@ -1,127 +1,112 @@
 """
-Configuration Loader for MarketPilot
-Loads and validates YAML configuration files
+Configuration management utilities for Marketpilot.
+
+This module provides functions to:
+- Load, save, and update YAML configuration files
+- Generate file paths for agent and graph configurations using an Enum
 """
 
-from pathlib import Path
-from typing import Dict, Any, List
 import yaml
-from loguru import logger
+from pathlib import Path
+from typing import Any
+from enum import Enum
+
+# NOTE - Default project-level config file
+CONFIG_FILE = Path("config.yml")
 
 
-class ConfigError(Exception):
-    """Configuration error"""
-
-    pass
-
-
-def load_config(path: str) -> Dict[str, Any]:
+class ConfigType(Enum):
     """
-    Load and validate YAML configuration file
+    Enum representing the type of configuration.
 
-    Args:
-        path: Path to YAML config file
-
-    Returns:
-        Validated configuration dictionary
-
-    Raises:
-        ConfigError: If config is invalid or missing required fields
+    Attributes:
+        AGENT: Agent configuration file
+        GRAPH: Graph configuration file
+        TOOL: Tool configuration file
+        CONDITION: Conditional edge configuration file
     """
-    config_path = Path(path)
+    AGENT = "agent"
+    GRAPH = "graph"
+    TOOL = "tool"
+    CONDITION = "condition"
 
-    if not config_path.exists():
-        raise ConfigError(f"Config file not found: {path}")
-
-    try:
-        with open(config_path, "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        raise ConfigError(f"Invalid YAML syntax in {path}: {e}")
-
-    if not config:
-        raise ConfigError(f"Empty config file: {path}")
-
-    logger.info(f"Loaded config from {path}")
-    return config
-
-
-def load_schema(schema_type: str) -> Dict[str, Any]:
-    """
-    Load data schema (price, news, fundamental)
-
-    Args:
-        schema_type: Type of schema (price, news, fundamental)
-
-    Returns:
-        Schema dictionary
-    """
-    schema_path = Path(f"src/marketpilot/schemas/{schema_type}_schema.yaml")
-
-    if not schema_path.exists():
-        raise ConfigError(f"Schema not found: {schema_path}")
-
-    return load_config(str(schema_path))
-
-
-def validate_data_columns(data: Dict[str, Any], schema_type: str) -> bool:
-    """
-    Validate that data has required columns based on schema
-
-    Args:
-        data: Data dictionary to validate
-        schema_type: Type of schema to validate against
-
-    Returns:
-        True if valid
-
-    Raises:
-        ConfigError: If validation fails
-    """
-    schema = load_schema(schema_type)
-    required_columns = schema.get("required_columns", [])
-
-    if not required_columns:
-        logger.warning(f"No required columns defined in {schema_type} schema")
-        return True
-
-    # Check if data has columns key
-    if "columns" in data:
-        data_columns = data["columns"]
-    elif isinstance(data, dict):
-        data_columns = list(data.keys())
+def make_config_path(config_type: ConfigType) -> Path:
+    CONFIG_DIR = Path("configs")
+    AGENT_DIR = CONFIG_DIR / "agents"
+    GRAPH_DIR = CONFIG_DIR / "graphs"
+    TOOL_DIR = CONFIG_DIR / "tools"
+    CONDITION_DIR = CONFIG_DIR / "conditions"
+    
+    if config_type == ConfigType.AGENT:
+        return AGENT_DIR
+    elif config_type == ConfigType.GRAPH:
+        return GRAPH_DIR
+    elif config_type == ConfigType.TOOL:
+        return TOOL_DIR
+    elif config_type == ConfigType.CONDITION:
+        return CONDITION_DIR
     else:
-        raise ConfigError("Data must be a dictionary or have 'columns' key")
+        raise ValueError(f"Invalid config type: {config_type}")
+    
 
-    # Find missing columns
-    missing = [col for col in required_columns if col not in data_columns]
+def make_file_path(config_type: ConfigType, file_name: str) -> Path:
+    """
+    Generate the full file path for a given configuration type and file name.
 
-    if missing:
-        error_msg = (
-            f"Missing required columns in {schema_type} data: {missing}\n"
-            f"Required: {required_columns}\n"
-            f"Found: {data_columns}"
-        )
-        logger.error(error_msg)
-        raise ConfigError(error_msg)
+    Args:
+        config_type (ConfigType): The type of configuration (AGENT or GRAPH or TOOL or CONDITION).
+        file_name (str): The base name of the config file (without extension).
 
-    logger.info(f"Validation passed for {schema_type} data")
-    return True
+    Returns:
+        Path: Full path to the configuration YAML file.
+
+    Raises:
+        ValueError: If an invalid ConfigType is provided.
+    """
+    CONFIG_DIR = Path("configs")
+    AGENT_DIR = CONFIG_DIR / "agents"
+    GRAPH_DIR = CONFIG_DIR / "graphs"
+    TOOL_DIR = CONFIG_DIR / "tools"
+    CONDITION_DIR = CONFIG_DIR / "conditions"
+
+    if config_type == ConfigType.AGENT:
+        return AGENT_DIR / f"{file_name}.yml"
+    elif config_type == ConfigType.GRAPH:
+        return GRAPH_DIR / f"{file_name}.yml"
+    elif config_type == ConfigType.TOOL:
+        return TOOL_DIR / f"{file_name}.yml"
+    elif config_type == ConfigType.CONDITION:
+        return CONDITION_DIR / f"{file_name}.yml"
+    else:
+        raise ValueError(f"Invalid config type: {config_type}")
 
 
-def get_required_columns(schema_type: str) -> List[str]:
-    """Get list of required columns for a schema type"""
-    schema = load_schema(schema_type)
-    return schema.get("required_columns", [])
+def load_config(file_path: Path = CONFIG_FILE) -> dict[str, Any]:
+    """
+    Load a YAML configuration file into a dictionary.
+
+    Args:
+        file_path (Path, optional): Path to the YAML config file.
+            Defaults to CONFIG_FILE.
+
+    Returns:
+        dict[str, Any]: Dictionary representation of the YAML configuration.
+        Returns an empty dictionary if the file does not exist.
+    """
+    if not file_path.exists():
+        return {}
+    with open(file_path, "r") as f:
+        return yaml.safe_load(f) or {}
 
 
-def get_optional_columns(schema_type: str) -> List[str]:
-    """Get list of optional columns for a schema type"""
-    schema = load_schema(schema_type)
-    return schema.get("optional_columns", [])
+def save_config(config: dict[str, Any], file_path: Path = CONFIG_FILE):
+    """
+    Save a dictionary as a YAML configuration file.
 
-
-def get_data_types(schema_type: str) -> Dict[str, str]:
-    """Get data types mapping for a schema type"""
-    schema = load_schema(schema_type)
-    return schema.get("data_types", {})
+    Args:
+        config (dict[str, Any]): Dictionary to save.
+        file_path (Path, optional): Path to save the YAML file.
+            Defaults to CONFIG_FILE.
+    """
+    with open(file_path, "w") as f:
+        yaml.dump(config, f, default_flow_style=False)

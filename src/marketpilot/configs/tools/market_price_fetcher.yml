@@ -1,0 +1,7 @@
+tool:
+  name: market_price_fetcher
+  type: Tool
+  version: 1.0
+  description: >
+    Retrieves real-time market prices, indicators, and sentiment metrics
+    for assets, enriching analytical context used by the Analyst and Potential agents.

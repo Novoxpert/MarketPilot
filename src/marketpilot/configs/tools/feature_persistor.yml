@@ -1,0 +1,8 @@
+tool:
+  name: feature_persistor
+  type: Tool
+  version: 1.0
+  description: >
+    Persists structured features, analytical insights, risk metrics, and
+    trade performance data into a centralized feature store for retrieval,
+    analysis, and ML model retraining.

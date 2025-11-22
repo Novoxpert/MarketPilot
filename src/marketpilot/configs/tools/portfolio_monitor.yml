@@ -1,0 +1,8 @@
+tool:
+  name: portfolio_monitor
+  type: Tool
+  version: 1.0
+  description: >
+    Monitors current positions, P&L, and overall risk exposure. Ensures
+    trades executed by the Trader agent remain within allowed risk and
+    strategy limits.

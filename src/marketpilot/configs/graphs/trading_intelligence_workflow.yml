@@ -1,0 +1,87 @@
+name: trading_intelligence_workflow
+version: 1.0
+description: >
+  Trading intelligence workflow: A multi-agent, high-throughput pipeline that
+  ingests real-time market and external data, performs analytical assessments,
+  evaluates risk and opportunity potential, and enables trading decisions.
+  Each agent specializes in a distinct stage of analysis, risk evaluation,
+  and execution orchestration.
+
+nodes:
+  - name: data_loader
+    type: Agent
+    role: DataLoader
+    description: >
+      Ingests raw financial data from streams, APIs, and data lakes. Normalizes and
+      cleans the data for downstream consumption by analytical agents.
+
+  - name: analyst
+    type: Agent
+    role: Analyst
+    description: >
+      Analyzes incoming datasets for sentiment, trends, anomalies, and correlations.
+      Utilizes advanced analytical tools to derive insights and forecasts. Outputs
+      structured intelligence for further evaluation.
+
+  - name: risk_evaluator
+    type: Agent
+    role: RiskEvaluator
+    description: >
+      Evaluates potential market and operational risks using the Analyst’s insights.
+      Computes risk scores and confidence metrics to guide decision-making. Interfaces
+      with potential and trader agents to optimize safety and profitability.
+
+  - name: potential_field_evaluator
+    type: Agent
+    role: OpportunityEvaluator
+    description: >
+      Identifies and scores trading opportunities based on risk-adjusted potential
+      returns. Uses multi-factor analysis including sentiment, volatility, and
+      macroeconomic indicators.
+
+  - name: trader
+    type: Agent
+    role: Trader
+    description: >
+      Executes trades based on validated signals from the Potential and RiskAssessor
+      agents. Employs adaptive strategies, algorithmic execution, and position management
+      to ensure optimal performance.
+
+  - name: feature_store
+    type: Agent
+    role: FeatureStore
+    description: >
+      Stores analytical features, risk metrics, and trade performance data for
+      historical analysis, model retraining, and audit trails.
+
+edges:
+  - from: data_loader
+    to: analyst
+    description: >
+      Delivers normalized and cleaned data for analytical processing and
+      sentiment or trend detection.
+
+  - from: analyst
+    to: potential_field_evaluator
+    description: >
+      Sends structured insights, trend analysis, and detected patterns to the
+      OpportunityEvaluator to help identify and score potential trading opportunities.
+
+  - from: risk_evaluator
+    to: potential_field_evaluator
+    description: >
+      Provides the Trader with evaluated risk metrics and recommended
+      exposure limits, ensuring trades align with risk tolerance.
+
+  - from: trader
+    to: feature_store
+    description: >
+      Logs trade execution details, outcomes, and performance metrics
+      into the FeatureStore for future analysis and model improvement.
+
+conditional_edges:
+  - from: potential_field_evaluator
+    condition: should_discuss_more
+    to:
+      - risk_evaluator
+      - trader
