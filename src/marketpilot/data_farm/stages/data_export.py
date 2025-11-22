@@ -1,6 +1,7 @@
 """
 Data Export Stage - Export processed data with Asset-First structure
 Organizes output by symbol (asset)
+Enhanced for news data with proper field handling
 """
 
 from typing import Dict, Any, List
@@ -31,17 +32,9 @@ class DataExportStage(BaseStage):
         Returns:
             Sanitized symbol (e.g., "BINANCE_BTCUSDT_P")
         """
-        # Replace invalid characters with underscore
-        # Windows invalid chars: < > : " / \ | ? *
-        # We'll also replace dots for consistency
         sanitized = re.sub(r'[<>:"/\\|?*.]', "_", symbol)
-
-        # Remove any double underscores that might have been created
         sanitized = re.sub(r"_+", "_", sanitized)
-
-        # Remove leading/trailing underscores
         sanitized = sanitized.strip("_")
-
         return sanitized
 
     async def _process(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -112,7 +105,9 @@ class DataExportStage(BaseStage):
                         else:
                             export_file = symbol_dir / f"{schema_type}.parquet"
 
-                        self._export_to_parquet(records, export_file, compression)
+                        self._export_to_parquet(
+                            records, export_file, compression, schema_type
+                        )
                     else:
                         # Fallback to JSON
                         if schema_type == "price":
@@ -247,14 +242,16 @@ class DataExportStage(BaseStage):
         records: List[Dict[str, Any]],
         file_path: Path,
         compression: str = "snappy",
+        schema_type: str = "unknown",
     ):
         """
-        Export records to Parquet format
+        Export records to Parquet format with proper handling for nested structures
 
         Args:
             records: List of records to export
             file_path: Output file path
             compression: Compression algorithm (snappy, gzip, etc.)
+            schema_type: Type of data (price, news, fundamental)
         """
         try:
             import pandas as pd
@@ -272,7 +269,27 @@ class DataExportStage(BaseStage):
                 # Flatten data payload
                 data_payload = record.get("data", {})
                 if isinstance(data_payload, dict):
-                    flat_record.update(data_payload)
+                    # Special handling for news data with nested structures
+                    if schema_type == "news":
+                        # Convert assets array to JSON string to avoid nested array issues
+                        if "assets" in data_payload and isinstance(
+                            data_payload["assets"], list
+                        ):
+                            flat_record["assets_json"] = json.dumps(
+                                data_payload["assets"]
+                            )
+                            flat_record["asset_count"] = data_payload.get(
+                                "asset_count", len(data_payload["assets"])
+                            )
+                            # Don't include raw assets array
+                            data_payload_copy = {
+                                k: v for k, v in data_payload.items() if k != "assets"
+                            }
+                            flat_record.update(data_payload_copy)
+                        else:
+                            flat_record.update(data_payload)
+                    else:
+                        flat_record.update(data_payload)
 
                 flattened.append(flat_record)
 

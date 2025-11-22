@@ -1,5 +1,5 @@
 """
-Main execution script for ResilientDataFarm with start/end support for price adapters
+Main execution script for ResilientDataFarm with start/end support for price and news adapters
 """
 
 import asyncio
@@ -16,7 +16,7 @@ from marketpilot.data_farm.resilient_data_farm import ResilientDataFarm
 
 
 async def main():
-    """Run complete data farm pipeline with optional start/end for price adapters"""
+    """Run complete data farm pipeline with optional start/end for adapters"""
 
     # Load environment variables
     load_dotenv()
@@ -32,11 +32,20 @@ async def main():
 
         # Get target symbols from config
         config = farm.get_config()
-        symbols = config.get("target_symbols", ["BINANCE:BTCUSDT.P"])
+        symbols = config.get("target_symbols", ["bitcoin", "ethereum"])
 
         print("✅ Data Farm initialized")
         print(f"   Symbols: {symbols}")
         print(f"   Adapters: {len(farm.get_adapters())}")
+
+        # Display loaded adapters by type
+        print("\n📋 Loaded Adapters:")
+        for adapter_type in ["price", "news", "fundamental"]:
+            adapters_of_type = farm.get_adapters_by_type(adapter_type)
+            if adapters_of_type:
+                print(f"   {adapter_type.upper()}:")
+                for adapter in adapters_of_type:
+                    print(f"      • {adapter.adapter_id} ({adapter.vendor})")
 
         # Step 1: Run smoke test
         print("\n" + "=" * 80)
@@ -69,79 +78,151 @@ async def main():
             print("🏭 Step 2: Running Complete Pipeline")
             print("=" * 80)
 
-            # FIX: Iterate over adapter objects, not keys
-            # Option 1: Use .values() to get adapter objects
-            for adapter in farm.get_adapters().values():
-                if adapter.schema_type == "price":
-                    end = datetime.utcnow()
-                    start = end - timedelta(minutes=10)  # Example: last 10 minutes
-                    print(
-                        f"\n📌 Fetching price data for {adapter.adapter_id} (last 10 min)"
-                    )
-                    result = await adapter.execute_ingest(
-                        symbols[0], start=start, end=end
-                    )
-                    print(f"Result: {result}")
+            # Define time ranges for different data types
+            end_time = datetime.utcnow()
 
-            # Run pipeline for other data types if needed
+            # Price: Last 10 minutes
+            price_start = end_time - timedelta(minutes=10)
+
+            # News: Last 24 hours
+            news_start = end_time - timedelta(days=1)
+
+            print("\n📅 Time Ranges:")
+            print(
+                f"   Price data: {price_start.strftime('%Y-%m-%d %H:%M')} to {end_time.strftime('%Y-%m-%d %H:%M')}"
+            )
+            print(
+                f"   News data: {news_start.strftime('%Y-%m-%d %H:%M')} to {end_time.strftime('%Y-%m-%d %H:%M')}"
+            )
+
+            # Determine which data types to fetch based on available adapters
+            data_types_to_fetch = []
+            if farm.get_adapters_by_type("price"):
+                data_types_to_fetch.append("price")
+            if farm.get_adapters_by_type("news"):
+                data_types_to_fetch.append("news")
+            if farm.get_adapters_by_type("fundamental"):
+                data_types_to_fetch.append("fundamental")
+
+            print(f"\n📊 Data types to process: {', '.join(data_types_to_fetch)}")
+
+            # Run complete pipeline
             pipeline_results = await farm.run_complete_pipeline(
-                symbols=symbols, data_types=["price"]  # Expand as needed
+                symbols=symbols, data_types=data_types_to_fetch
             )
 
             print("\n✅ Pipeline Completed Successfully!")
             print(f"   Duration: {pipeline_results.get('pipeline_duration', 0):.2f}s")
+
+            # Fetch summary
+            fetch_summary = pipeline_results.get("fetch_summary", {})
+            print(f"   Records fetched: {fetch_summary.get('total_records', 0)}")
             print(
-                f"   Records fetched: {pipeline_results['fetch_summary']['total_records']}"
+                f"   Successful fetches: {fetch_summary.get('successful_fetches', 0)}"
             )
-            print(
-                f"   Successful fetches: {pipeline_results['fetch_summary']['successful_fetches']}"
-            )
-            print(
-                f"   Failed fetches: {pipeline_results['fetch_summary']['failed_fetches']}"
-            )
+            print(f"   Failed fetches: {fetch_summary.get('failed_fetches', 0)}")
+
+            # Show fetch errors if any
+            fetch_errors = pipeline_results.get("fetch_errors", [])
+            if fetch_errors:
+                print("\n⚠️  Fetch Errors:")
+                for error in fetch_errors:
+                    print(
+                        f"   • {error['symbol']} ({error['data_type']}): {error['error']}"
+                    )
 
             # Show stage results
+            print("\n📊 Pipeline Stages:")
+
             if "nan_stats" in pipeline_results:
-                print("\n📊 Pipeline Stages:")
                 print(
                     f"   NaN Processing: {pipeline_results['nan_stats'].get('nan_count', 0)} NaNs fixed"
                 )
 
             if "alignment_stats" in pipeline_results:
+                alignment = pipeline_results["alignment_stats"]
                 print(
-                    f"   Temporal Alignment: {pipeline_results['alignment_stats'].get('aligned_count', 0)} records aligned"
+                    f"   Temporal Alignment: {alignment.get('aligned_count', 0)}/{alignment.get('total_records', 0)} records aligned ({alignment.get('alignment_rate', '0%')})"
                 )
 
             if "dedup_stats" in pipeline_results:
+                dedup = pipeline_results["dedup_stats"]
                 print(
-                    f"   Deduplication: {pipeline_results['dedup_stats'].get('duplicates_removed', 0)} duplicates removed"
+                    f"   Deduplication: {dedup.get('duplicates_removed', 0)} duplicates removed, {dedup.get('unique_records', 0)} unique records kept ({dedup.get('deduplication_rate', '0%')})"
                 )
 
             if "qa_stats" in pipeline_results:
                 qa = pipeline_results["qa_stats"]
+                threshold_icon = "✅" if qa.get("threshold_met", False) else "⚠️"
                 print(
-                    f"   Quality Assurance: {qa.get('qa_passed', 0)}/{qa.get('total_records', 0)} passed ({qa.get('pass_rate', '0%')})"
+                    f"   Quality Assurance: {threshold_icon} {qa.get('qa_passed', 0)}/{qa.get('total_records', 0)} passed ({qa.get('pass_rate', '0%')})"
                 )
+
+                # Show QA issues if any
+                qa_issues = qa.get("issues", [])
+                if qa_issues:
+                    print(f"\n   ⚠️  QA Issues Found ({len(qa_issues)}):")
+                    for issue in qa_issues[:5]:  # Show first 5
+                        print(
+                            f"      • {issue['symbol']} ({issue['schema_type']}): {', '.join(issue['issues'])}"
+                        )
+                    if len(qa_issues) > 5:
+                        print(f"      ... and {len(qa_issues) - 5} more")
 
             if "export_stats" in pipeline_results:
                 export = pipeline_results["export_stats"]
                 print("\n📁 Export Results:")
                 print(f"   Files exported: {len(export.get('exported_files', []))}")
                 print(f"   Records exported: {export.get('records_exported', 0)}")
+                print(f"   Output directory: {export.get('output_directory', 'N/A')}")
                 print(
                     f"   Symbols processed: {', '.join(export.get('symbols_processed', []))}"
                 )
 
+                # Show exported files by symbol
+                exported_files = export.get("exported_files", [])
+                if exported_files:
+                    print("\n   Exported files:")
+                    for file_path in exported_files[:10]:  # Show first 10
+                        print(f"      • {file_path}")
+                    if len(exported_files) > 10:
+                        print(f"      ... and {len(exported_files) - 10} more")
+
             # Validation results
             validation = pipeline_results.get("validation_report", {})
+            print("\n🔍 Schema Validation:")
             if validation.get("validation_passed"):
-                print("\n✅ Schema Validation: PASSED")
+                print("   ✅ PASSED")
+                stages_validated = validation.get("stages_validated", [])
+                if stages_validated:
+                    print(f"   Validated stages: {', '.join(stages_validated)}")
             else:
-                print("\n❌ Schema Validation: FAILED")
+                print("   ❌ FAILED")
                 if validation.get("errors"):
                     print("   Errors:")
                     for error in validation["errors"]:
-                        print(f"   - {error}")
+                        print(f"      • {error}")
+
+            # Show warnings if any
+            warnings = validation.get("warnings", [])
+            if warnings:
+                print("   ⚠️  Warnings:")
+                for warning in warnings:
+                    print(f"      • {warning}")
+
+            # Final summary
+            print("\n" + "=" * 80)
+            print("📈 SUMMARY")
+            print("=" * 80)
+            print(f"   Total symbols processed: {len(symbols)}")
+            print(f"   Total data types: {len(data_types_to_fetch)}")
+            print(f"   Total records exported: {export.get('records_exported', 0)}")
+            print(
+                f"   Pipeline duration: {pipeline_results.get('pipeline_duration', 0):.2f}s"
+            )
+            print(
+                f"   Quality threshold met: {'✅ Yes' if qa.get('threshold_met', False) else '⚠️  No'}"
+            )
 
         else:
             print("\n⚠️  Skipping pipeline execution due to smoke test failures")
@@ -157,6 +238,12 @@ async def main():
     print("\n" + "=" * 80)
     print("✅ Data Farm execution complete")
     print("=" * 80)
+    print("\n📝 Logs available at:")
+    print("   • logs/pipeline/current.jsonl")
+    print("   • logs/stages/*.jsonl")
+    print("   • logs/adapters/*.jsonl")
+    print("   • logs/errors/current.jsonl")
+    print()
 
 
 if __name__ == "__main__":

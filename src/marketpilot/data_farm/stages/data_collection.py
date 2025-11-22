@@ -86,36 +86,62 @@ class DataCollectionStage(BaseStage):
                         }
                     )
 
-        # Process news data
+        # Process news data - UPDATED for new structure
         if "news" in raw_data_by_type:
             adapter_info = adapter_mapping.get(
                 "news", {"id": "news_unknown", "vendor": "unknown"}
             )
 
-            for symbol, records in raw_data_by_type["news"].items():
-                if isinstance(records, list):
-                    for record in records:
+            for symbol, news_response in raw_data_by_type["news"].items():
+                # news_response is the full response from adapter with structure:
+                # {"symbol": "...", "startdate": "...", "enddate": "...", "timestamp": "...", "data": [...]}
+
+                if isinstance(news_response, dict):
+                    # Get the array of news articles from 'data' field
+                    news_articles = news_response.get("data", [])
+
+                    # If news_articles is a list, process each article
+                    if isinstance(news_articles, list):
+                        for article in news_articles:
+                            collected_records.append(
+                                {
+                                    "adapter_id": adapter_info["id"],
+                                    "symbol": symbol,
+                                    "vendor": adapter_info["vendor"],
+                                    "schema_type": "news",
+                                    "data": article,
+                                    "ingested_at": article.get("published_at_utc"),
+                                }
+                            )
+                    else:
+                        # Single article (shouldn't happen with new adapter, but handle it)
                         collected_records.append(
                             {
                                 "adapter_id": adapter_info["id"],
                                 "symbol": symbol,
                                 "vendor": adapter_info["vendor"],
                                 "schema_type": "news",
-                                "data": record,
-                                "ingested_at": record.get("published_at_utc"),
+                                "data": news_articles,
+                                "ingested_at": (
+                                    news_articles.get("published_at_utc")
+                                    if isinstance(news_articles, dict)
+                                    else None
+                                ),
                             }
                         )
-                else:
-                    collected_records.append(
-                        {
-                            "adapter_id": adapter_info["id"],
-                            "symbol": symbol,
-                            "vendor": adapter_info["vendor"],
-                            "schema_type": "news",
-                            "data": records,
-                            "ingested_at": records.get("published_at_utc"),
-                        }
-                    )
+                elif isinstance(news_response, list):
+                    # Fallback: if it's already a list of articles (old format)
+                    for article in news_response:
+                        collected_records.append(
+                            {
+                                "adapter_id": adapter_info["id"],
+                                "symbol": symbol,
+                                "vendor": adapter_info["vendor"],
+                                "schema_type": "news",
+                                "data": article,
+                                "ingested_at": article.get("published_at_utc"),
+                            }
+                        )
 
         # Process fundamental data
         if "fundamental" in raw_data_by_type:

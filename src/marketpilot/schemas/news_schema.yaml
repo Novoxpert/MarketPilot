@@ -5,9 +5,26 @@ required_columns:
   - startdate
   - enddate
   - data
+  - timestamp
 
 data_types:
   symbol: string
   startdate: datetime
   enddate: datetime
-  data: object
+  timestamp: datetime
+  data: array
+
+# Data array items should contain:
+data_item_structure:
+  - news_id: string
+  - symbol: string
+  - primary_symbol: string
+  - published_at_utc: datetime
+  - title: string
+  - subtitle: string
+  - source: string
+  - source_name: string
+  - source_url: string
+  - assets: array
+  - asset_count: integer
+  - mapping_confidence: float

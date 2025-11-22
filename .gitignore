@@ -88,3 +88,4 @@ data/
 data/
 data_test/
 data_farm_exports/
+.env

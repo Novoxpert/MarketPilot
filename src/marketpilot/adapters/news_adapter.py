@@ -1,228 +1,342 @@
-from typing import List, Dict, Any
+"""
+Resilient News Adapter using Internal News API
+"""
+
+from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
+import os
+import aiohttp
+from urllib.parse import urlencode
 from marketpilot.adapters.base_adapter import BaseAdapter
+from marketpilot.utils.logger import log_event
+from marketpilot.utils.symbol_mapper import map_symbol_to_slug
 
 
 class ResilientNewsAdapter(BaseAdapter):
-    """News data adapter"""
+    """News data adapter using internal News API"""
 
-    async def _execute_ingest_internal(
-        self, symbol: str, start: datetime = None, end: datetime = None
-    ) -> Dict[str, Any]:
-        """Ingest news data for a symbol"""
-        try:
-            end_date = datetime.utcnow()
-            start_date = end_date - timedelta(days=1)
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
 
-            # Mock news data with timestamp field
-            mock_news = [
-                {
-                    "title": f"{symbol} Stock Analysis",
-                    "url": "https://example.com/news1",
-                    "published_at": datetime.utcnow().isoformat(),
-                    "sentiment": "positive",
-                },
-                {
-                    "title": f"{symbol} Quarterly Earnings",
-                    "url": "https://example.com/news2",
-                    "published_at": (
-                        datetime.utcnow() - timedelta(hours=3)
-                    ).isoformat(),
-                    "sentiment": "neutral",
-                },
-            ]
+        # Base URL from environment
+        self.api_base_url = os.getenv("NEWS_API_BASE_URL")
 
-            result_data = {
-                "symbol": symbol,
-                "timestamp": datetime.utcnow().isoformat(),
-                "startdate": start_date.isoformat(),
-                "enddate": end_date.isoformat(),
-                "data": mock_news,
-            }
+        if not self.api_base_url:
+            raise ValueError(
+                "NEWS_API_BASE_URL not found. Please set it in your .env file."
+            )
 
-            print("eeeeeeeee")
-            self.validate_schema(result_data)
-            self.log_success(symbol, record_count=len(mock_news))
+        # Default limit for news articles
+        self.default_limit = config.get("limit", 100)
 
-            return {
-                "success": True,
-                "data": result_data,
-                "vendor": self.vendor,
-                "ingested_at": datetime.utcnow().isoformat(),
-            }
-
-        except Exception as e:
-            self.log_error(symbol, str(e))
-            return {"success": False, "error": str(e), "vendor": self.vendor}
-
-
-class ResilientFundamentalAdapter(BaseAdapter):
-    """Fundamental data adapter using FMP"""
-
-    async def _execute_ingest_internal(self, symbol: str) -> Dict[str, Any]:
-        """Ingest fundamental data for a symbol"""
-        try:
-            end_date = datetime.utcnow()
-            start_date = end_date - timedelta(days=365)
-
-            # Mock fundamental data
-            mock_fundamentals = {
-                "income_statement": {
-                    "revenue": 394328000000,
-                    "net_income": 99803000000,
-                    "eps": 6.15,
-                },
-                "balance_sheet": {
-                    "total_assets": 352755000000,
-                    "total_liabilities": 302083000000,
-                    "stockholders_equity": 50672000000,
-                },
-                "cash_flow": {
-                    "operating_cash_flow": 122151000000,
-                    "capital_expenditure": -10959000000,
-                    "free_cash_flow": 111192000000,
-                },
-                "ratios": {"pe_ratio": 28.5, "debt_to_equity": 5.96, "roe": 0.196},
-            }
-
-            result_data = {
-                "symbol": symbol,
-                "timestamp": datetime.utcnow().isoformat(),
-                "startdate": start_date.isoformat(),
-                "enddate": end_date.isoformat(),
-                "data": mock_fundamentals,
-            }
-
-            print("wwwwwwwwww")
-            self.validate_schema(result_data)
-            self.log_success(symbol, record_count=1)
-
-            return {
-                "success": True,
-                "data": result_data,
-                "vendor": self.vendor,
-                "ingested_at": datetime.utcnow().isoformat(),
-            }
-
-        except Exception as e:
-            self.log_error(symbol, str(e))
-            return {"success": False, "error": str(e), "vendor": self.vendor}
-
-
-"""
-Alternative: Update QA Stage to be more flexible with timestamps
-This approach allows adapters to use different timestamp field names
-"""
-
-
-class FlexibleQualityAssuranceStage:
-    """QA stage that accepts multiple timestamp field variations"""
-
-    async def _process(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Perform quality assurance checks"""
-        unique_data = data.get("unique_data", [])
-
-        validated_records = []
-        qa_passed = 0
-        qa_failed = 0
-        qa_issues_list = []
-
-        for record in unique_data:
-            record_data = record.get("data", {})
-            qa_issues: List[str] = []
-
-            # Check 1: Symbol exists
-            if "symbol" not in record or not record.get("symbol"):
-                qa_issues.append("Missing symbol")
-
-            # Check 2: Adapter ID exists
-            if "adapter_id" not in record or not record.get("adapter_id"):
-                qa_issues.append("Missing adapter_id")
-
-            # Check 3: Data payload exists
-            if not record_data or len(record_data) == 0:
-                qa_issues.append("Empty data payload")
-
-            #  Check 4: Flexible timestamp validation
-            # Accept any of these timestamp fields
-            timestamp_fields = [
-                "timestamp",
-                "date",
-                "datetime",
-                "time",
-                "published_at",
-                "created_at",
-                "updated_at",
-            ]
-
-            has_timestamp = False
-            # timestamp_value = None
-
-            for field in timestamp_fields:
-                if field in record_data and record_data[field]:
-                    has_timestamp = True
-                    # timestamp_value = record_data[field]
-                    break
-
-            # Also check if timestamp exists in nested data
-            if not has_timestamp and "data" in record_data:
-                nested_data = record_data["data"]
-                if isinstance(nested_data, dict):
-                    for field in timestamp_fields:
-                        if field in nested_data and nested_data[field]:
-                            has_timestamp = True
-                            # timestamp_value = nested_data[field]
-                            break
-
-            if not has_timestamp:
-                qa_issues.append("Missing timestamp field")
-
-            # Check 5: Price data validation
-            if "open" in record_data or "close" in record_data:
-                try:
-                    for price_field in ["open", "high", "low", "close"]:
-                        if price_field in record_data:
-                            price_value = record_data[price_field]
-                            if price_value is not None:
-                                float(price_value)
-                except (ValueError, TypeError) as e:
-                    qa_issues.append(f"Invalid numeric value: {str(e)}")
-
-            # Check 6: Volume validation
-            if "volume" in record_data:
-                try:
-                    volume = record_data["volume"]
-                    if volume is not None:
-                        vol_value = float(volume)
-                        if vol_value < 0:
-                            qa_issues.append("Negative volume")
-                except (ValueError, TypeError):
-                    qa_issues.append("Invalid volume value")
-
-            # Record result
-            if qa_issues:
-                qa_failed += 1
-                qa_issues_list.append(
-                    {
-                        "symbol": record.get("symbol"),
-                        "adapter_id": record.get("adapter_id"),
-                        "issues": qa_issues,
-                    }
-                )
-            else:
-                qa_passed += 1
-                validated_records.append(record)
-
-        pass_rate = (
-            f"{(qa_passed / len(unique_data) * 100):.1f}%" if unique_data else "0%"
+        log_event(
+            stage="initialization",
+            block="adapter",
+            level="INFO",
+            msg="Initialized ResilientNewsAdapter",
+            extra={
+                "adapter_id": self.adapter_id,
+                "base_url": self.api_base_url,
+                "default_limit": self.default_limit,
+            },
         )
 
-        data["validated_data"] = validated_records
-        data["qa_stats"] = {
-            "qa_passed": qa_passed,
-            "qa_failed": qa_failed,
-            "pass_rate": pass_rate,
-            "issues": qa_issues_list,
-            "total_records": len(unique_data),
+    def _map_symbol_to_asset_slug(self, symbol: str) -> str:
+        """
+        Map trading symbol to asset slug format expected by API
+        Uses centralized symbol_mapper utility
+
+        Args:
+            symbol: Trading symbol (e.g., "BINANCE:BTCUSDT.P", "BTC", "AAPL")
+
+        Returns:
+            Asset slug (e.g., "bitcoin", "ethereum")
+        """
+        return map_symbol_to_slug(symbol)
+
+    def _build_api_url(
+        self,
+        asset_slug: str,
+        start: Optional[datetime],
+        end: Optional[datetime],
+        limit: int = 100,
+    ) -> str:
+        """Build API URL with proper parameters"""
+        if start is None or end is None:
+            end = datetime.utcnow()
+            start = end - timedelta(days=1)  # Default: last 24 hours
+
+        params = {
+            "asset_slug": asset_slug,
+            "from_date": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "to_date": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "limit": limit,
+            "sort_by": "releasedAt",
+            "order": "desc",
         }
-        return data
+        return f"{self.api_base_url}?{urlencode(params)}"
+
+    def _transform_api_response(
+        self,
+        api_data: List[Dict[str, Any]],
+        symbol: str,
+        start: datetime,
+        end: datetime,
+    ) -> Dict[str, Any]:
+        """
+        Transform API response to match expected schema format
+
+        Args:
+            api_data: List of news articles from API
+            symbol: Original symbol
+            start: Start datetime
+            end: End datetime
+
+        Returns:
+            Transformed data matching news schema
+        """
+        transformed_articles = []
+
+        for article in api_data:
+            # Extract assets and find primary asset
+            assets = article.get("assets", [])
+            primary_symbol = assets[0].get("symbol") if assets else symbol
+
+            # Build transformed article
+            transformed_article = {
+                "news_id": article.get("slug", ""),
+                "symbol": symbol,  # Keep original symbol
+                "primary_symbol": primary_symbol,
+                "published_at_utc": article.get("releasedAt", ""),
+                "title": article.get("title", ""),
+                "subtitle": article.get("subtitle", ""),
+                "source": article.get("source", ""),
+                "source_name": article.get("sourceName", ""),
+                "source_url": article.get("sourceUrl", ""),
+                "assets": assets,
+                "asset_count": len(assets),
+                "mapping_confidence": (
+                    1.0 if assets else 0.5
+                ),  # High confidence if assets present
+            }
+
+            transformed_articles.append(transformed_article)
+
+        # Return in expected schema format
+        return {
+            "symbol": symbol,
+            "startdate": start.isoformat(),
+            "enddate": end.isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
+            "data": transformed_articles,
+        }
+
+    async def _execute_ingest_internal(
+        self,
+        symbol: str,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
+        """Execute ingestion with proper error handling"""
+
+        try:
+            # Map symbol to asset slug
+            asset_slug = self._map_symbol_to_asset_slug(symbol)
+
+            # Set default time range if not provided
+            if start is None or end is None:
+                end = datetime.utcnow()
+                start = end - timedelta(days=1)
+
+            url = self._build_api_url(asset_slug, start, end, self.default_limit)
+
+            log_event(
+                stage="ingestion",
+                block="adapter",
+                level="DEBUG",
+                msg="Fetching news data from API",
+                extra={
+                    "adapter_id": self.adapter_id,
+                    "symbol": symbol,
+                    "asset_slug": asset_slug,
+                    "url": url,
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                },
+            )
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url, timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    if response.status != 200:
+                        error_msg = f"API returned status {response.status}"
+                        text = await response.text()
+                        log_event(
+                            stage="ingestion",
+                            block="adapter",
+                            level="ERROR",
+                            msg=error_msg,
+                            extra={
+                                "status": response.status,
+                                "response": text[:200],
+                                "symbol": symbol,
+                            },
+                        )
+                        self.log_error(symbol, error_msg)
+                        return {
+                            "success": False,
+                            "error": error_msg,
+                            "vendor": self.vendor,
+                            "status_code": response.status,
+                        }
+
+                    api_response = await response.json()
+
+            # Check API response success flag
+            if not api_response.get("success", False):
+                error_msg = "API returned success=false"
+                log_event(
+                    stage="ingestion",
+                    block="adapter",
+                    level="ERROR",
+                    msg=error_msg,
+                    extra={
+                        "symbol": symbol,
+                        "asset_slug": asset_slug,
+                        "api_response": str(api_response)[:200],
+                    },
+                )
+                self.log_error(symbol, error_msg)
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "vendor": self.vendor,
+                }
+
+            # Extract data from response
+            news_data = api_response.get("data", [])
+            pagination = api_response.get("pagination", {})
+
+            if not news_data:
+                log_event(
+                    stage="ingestion",
+                    block="adapter",
+                    level="WARNING",
+                    msg=f"No news data returned for symbol {symbol}",
+                    extra={
+                        "adapter_id": self.adapter_id,
+                        "symbol": symbol,
+                        "asset_slug": asset_slug,
+                    },
+                )
+                # Return empty result but still valid format
+                empty_result = {
+                    "symbol": symbol,
+                    "startdate": start.isoformat(),
+                    "enddate": end.isoformat(),
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": [],
+                }
+                return {
+                    "success": True,
+                    "data": empty_result,
+                    "vendor": self.vendor,
+                    "record_count": 0,
+                    "metadata": {
+                        "pagination": pagination,
+                        "asset_slug": asset_slug,
+                    },
+                }
+
+            # Transform API response to match schema
+            transformed_data = self._transform_api_response(
+                news_data, symbol, start, end
+            )
+
+            # Validate schema for transformed data
+            self.validate_schema(transformed_data)
+
+            record_count = len(news_data)
+
+            log_event(
+                stage="ingestion",
+                block="adapter",
+                level="INFO",
+                msg=f"Successfully ingested {record_count} news articles",
+                extra={
+                    "adapter_id": self.adapter_id,
+                    "symbol": symbol,
+                    "asset_slug": asset_slug,
+                    "record_count": record_count,
+                    "mode": "latest" if (start is None or end is None) else "range",
+                    "pagination": pagination,
+                },
+            )
+
+            self.log_success(symbol, record_count=record_count)
+
+            return {
+                "success": True,
+                "data": transformed_data,
+                "vendor": self.vendor,
+                "ingested_at": datetime.utcnow().isoformat(),
+                "record_count": record_count,
+                "metadata": {
+                    "pagination": pagination,
+                    "asset_slug": asset_slug,
+                    "time_range": {
+                        "start": start.isoformat(),
+                        "end": end.isoformat(),
+                    },
+                },
+            }
+
+        except aiohttp.ClientError as e:
+            error_msg = f"Network error: {str(e)}"
+            self.log_error(symbol, error_msg)
+            return {
+                "success": False,
+                "error": error_msg,
+                "vendor": self.vendor,
+            }
+
+        except Exception as e:
+            error_msg = f"Unexpected error: {str(e)}"
+            self.log_error(symbol, error_msg)
+            return {
+                "success": False,
+                "error": error_msg,
+                "vendor": self.vendor,
+            }
+
+
+# Example usage
+if __name__ == "__main__":
+    import asyncio
+
+    config = {
+        "vendor": "internal_news_api",
+        "id": "news_internal_001",
+        "cadence": "5min",
+        "schema_type": "news",
+        "limit": 100,
+    }
+
+    adapter = ResilientNewsAdapter(config)
+
+    print("\n=== Fetch latest news (last 24 hours) ===")
+    latest = asyncio.run(adapter.execute_ingest("bitcoin"))
+    print(f"Success: {latest.get('success')}")
+    print(f"Records: {latest.get('record_count', 0)}")
+    if latest.get("success") and latest.get("data"):
+        print(f"Sample article: {latest['data']['data'][0]['title']}")
+
+    print("\n=== Fetch news for specific time range ===")
+    end = datetime.utcnow()
+    start = end - timedelta(hours=6)
+    ranged = asyncio.run(
+        adapter.execute_ingest("BINANCE:BTCUSDT.P", start=start, end=end)
+    )
+    print(f"Success: {ranged.get('success')}")
+    print(f"Records: {ranged.get('record_count', 0)}")
