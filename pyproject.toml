@@ -14,12 +14,21 @@ packages = [
 python = "^3.11"
 pandas = "^2.3.3"
 numpy = "^2.3.4"
-pyyaml = "^6.0.3"
+pyyaml = "6.0.3"
 requests = "^2.32.5"
 aiohttp = "^3.13.2"
 loguru = "^0.7.3"
 python-dotenv = "^1.2.1"
 pyarrow = "^22.0.0"
+rich = "14.2.0"
+prompt_toolkit = "3.0.52"
+setuptools = "65.0.0"
+langgraph = "1.0"
+langchain = "1.0"
+langchain-anthropic = "^1.1.0"
+ipython = "^9.7.0"
+gpt4all = "^2.8.2"
+langchain-core = "^1.1.0"
 
 [tool.poetry.group.dev.dependencies]
 # Add your development dependencies here

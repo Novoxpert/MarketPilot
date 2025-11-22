@@ -56,7 +56,7 @@ from rich.console import Console
 from rich.tree import Tree
 from rich.padding import Padding
 from typing import Dict, List, TypedDict
-from utils.config_loader import load_config
+from marketpilot.utils.config_loader import load_config
 
 class Node(TypedDict):
     name: str

@@ -1,4 +1,4 @@
-from agentic.agent_types import AgentState
+from marketpilot.agentic.agent_types import AgentState
 
 def should_discuss_more_condition(
   state: AgentState,

@@ -1,5 +1,5 @@
 from langchain_core.messages import HumanMessage
-from agentic.graph_builder import build_dynamic_graph
+from marketpilot.agentic.graph_builder import build_dynamic_graph
 
 compiled_graph = build_dynamic_graph("trading_intelligence_workflow")
 

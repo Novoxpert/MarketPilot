@@ -1,13 +1,13 @@
 import importlib
 from typing import Dict, Optional, List, Callable, cast
 
-from utils.config_loader import ConfigType, make_config_path, load_config
+from marketpilot.utils.config_loader import ConfigType, make_config_path, load_config
 
-from agentic.config_models import AgentConfig, ToolConfig, ConditionConfig
-from agentic.agent_types import AgentState
-from agentic.tool_protocol import ToolCallable
-from agentic.agent_protocol import AgentCallable
-from agentic.condition_protocol import ConditionCallable
+from marketpilot.agentic.config_models import AgentConfig, ToolConfig, ConditionConfig
+from marketpilot.agentic.agent_types import AgentState
+from marketpilot.agentic.tool_protocol import ToolCallable
+from marketpilot.agentic.agent_protocol import AgentCallable
+from marketpilot.agentic.condition_protocol import ConditionCallable
 
 class AgentManager:
 

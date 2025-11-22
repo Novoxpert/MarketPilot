@@ -44,7 +44,7 @@ Dependencies:
 
 """
 
-from .run_agent import runner
+from marketpilot.cli.commands.run_agent import runner
 
 from rich.console import Console
 from rich.progress import track

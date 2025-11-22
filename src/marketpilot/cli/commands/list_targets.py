@@ -48,7 +48,7 @@ from typing import Dict, Any, List
 from rich.console import Console
 from rich.table import Table
 from rich.padding import Padding
-from utils.config_loader import load_config, ConfigType, make_config_path
+from marketpilot.utils.config_loader import load_config, ConfigType, make_config_path
 
 console = Console()
 

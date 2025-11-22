@@ -1,7 +1,7 @@
 from typing import Any
 
-from agentic.agent_manager import AgentManager
-from agentic.agent_types import AgentState
+from marketpilot.agentic.agent_manager import AgentManager
+from marketpilot.agentic.agent_types import AgentState
 
 def runner(name: str) -> Any:
 

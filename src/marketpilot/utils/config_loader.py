@@ -31,7 +31,7 @@ class ConfigType(Enum):
     CONDITION = "condition"
 
 def make_config_path(config_type: ConfigType) -> Path:
-    CONFIG_DIR = Path("configs")
+    CONFIG_DIR = Path("src/marketpilot/configs")
     AGENT_DIR = CONFIG_DIR / "agents"
     GRAPH_DIR = CONFIG_DIR / "graphs"
     TOOL_DIR = CONFIG_DIR / "tools"
@@ -63,7 +63,7 @@ def make_file_path(config_type: ConfigType, file_name: str) -> Path:
     Raises:
         ValueError: If an invalid ConfigType is provided.
     """
-    CONFIG_DIR = Path("configs")
+    CONFIG_DIR = Path("src/marketpilot/configs")
     AGENT_DIR = CONFIG_DIR / "agents"
     GRAPH_DIR = CONFIG_DIR / "graphs"
     TOOL_DIR = CONFIG_DIR / "tools"

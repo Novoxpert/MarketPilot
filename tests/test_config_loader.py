@@ -1,7 +1,7 @@
 """Tests for config loader"""
 
 import pytest
-from marketpilot.utils.config_loader import (
+from marketpilot.utils.config_loader_ import (
     load_schema,
     validate_data_columns,
     get_required_columns,

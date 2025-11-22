@@ -1,5 +1,5 @@
 from typing import Protocol
-from agentic.agent_types import AgentState
+from marketpilot.agentic.agent_types import AgentState
 
 
 class AgentCallable(Protocol):

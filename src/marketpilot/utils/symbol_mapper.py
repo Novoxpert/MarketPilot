@@ -4,7 +4,7 @@ Symbol Mapper Utility - Maps trading symbols to asset slugs
 
 from typing import Optional, Dict
 from pathlib import Path
-from marketpilot.utils.config_loader import load_config
+from marketpilot.utils.config_loader_ import load_config
 from marketpilot.utils.logger import log_event
 
 

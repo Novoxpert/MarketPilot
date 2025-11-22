@@ -1,6 +1,6 @@
 from typing_extensions import TypedDict, Any, List, Dict
-from agentic.config_models import AgentConfig
-from agentic.tool_protocol import ToolCallable
+from marketpilot.agentic.config_models import AgentConfig
+from marketpilot.agentic.tool_protocol import ToolCallable
 # from langchain.chat_models import ChatOpenAI
 from langchain_core.messages import HumanMessage, AnyMessage # type: ignore
 from typing import Annotated

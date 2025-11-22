@@ -1,6 +1,6 @@
 from typing import Dict, TypedDict, Any, List
-from agentic.config_models import AgentConfig
-from agentic.tool_protocol import ToolCallable
+from marketpilot.agentic.config_models import AgentConfig
+from marketpilot.agentic.tool_protocol import ToolCallable
 from langchain.messages import AnyMessage, HumanMessage
 from typing import Annotated
 import operator

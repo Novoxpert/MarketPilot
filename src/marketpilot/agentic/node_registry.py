@@ -1,8 +1,8 @@
 from typing import Dict
 
-from agentic.agent_protocol import AgentCallable
-from agentic.condition_protocol import ConditionCallable
-from agentic.agent_manager import AgentManager
+from marketpilot.agentic.agent_protocol import AgentCallable
+from marketpilot.agentic.condition_protocol import ConditionCallable
+from marketpilot.agentic.agent_manager import AgentManager
 
 manager = AgentManager()
 

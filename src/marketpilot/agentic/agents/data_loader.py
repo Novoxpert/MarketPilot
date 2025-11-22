@@ -1,6 +1,6 @@
 from typing import Dict, TypedDict
-from agentic.config_models import AgentConfig
-from agentic.tool_protocol import ToolCallable
+from marketpilot.agentic.config_models import AgentConfig
+from marketpilot.agentic.tool_protocol import ToolCallable
 # from langchain.vectorstores import FAISS
 # from langchain.embeddings import OpenAIEmbeddings
 # from langchain.schema import Document

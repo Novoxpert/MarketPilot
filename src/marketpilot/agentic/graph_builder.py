@@ -1,7 +1,7 @@
 from langgraph.graph import StateGraph, START, END # type: ignore
-from agentic.agent_types import AgentState
-from agentic.node_registry import AGENT_REGISTRY, CONDITION_FN_REGISTRY
-from utils.config_loader import load_config
+from marketpilot.agentic.agent_types import AgentState
+from marketpilot.agentic.node_registry import AGENT_REGISTRY, CONDITION_FN_REGISTRY
+from marketpilot.utils.config_loader import load_config
 from pathlib import Path
 
 def build_dynamic_graph(graph_name: str):

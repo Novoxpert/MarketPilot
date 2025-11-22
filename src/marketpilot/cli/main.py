@@ -45,7 +45,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
 from rich.padding import Padding
-from cli.commands import run_target, visualize_graph, list_targets, config
+from marketpilot.cli.commands import run_target, visualize_graph, list_targets, config
 
 console = Console()
 
