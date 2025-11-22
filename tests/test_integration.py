@@ -115,7 +115,7 @@ class TestDataFarmConfiguration:
 
     def test_config_loader_initialization(self):
         """Test that config loader works"""
-        from marketpilot.config.config_loader import load_config
+        from marketpilot.utils.config_loader import load_config
 
         # This should work with default config
         config = load_config("src/marketpilot/config/data_farm_config.yaml")

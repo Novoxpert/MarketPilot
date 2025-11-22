@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 from datetime import datetime
 import asyncio
-from marketpilot.config.config_loader import load_config
+from marketpilot.utils.config_loader import load_config
 from marketpilot.utils.logger import log_event, setup_logging
 from marketpilot.adapters.base_adapter import BaseAdapter
 from marketpilot.adapters.price_adapter import ResilientPriceAdapter
