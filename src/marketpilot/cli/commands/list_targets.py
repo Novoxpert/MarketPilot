@@ -74,7 +74,9 @@ def main() -> None:
     # Helper to load all configs in a folder
     def load_configs(config_type: ConfigType) -> List[Dict[str, Any]]:
         folder_path: Path = make_config_path(config_type)
-        folder: Path = folder_path.parent if folder_path.suffix else folder_path  # ensure folder path
+        folder: Path = (
+            folder_path.parent if folder_path.suffix else folder_path
+        )  # ensure folder path
         if not folder.exists():
             return []
         configs: List[Dict[str, Any]] = []
@@ -90,7 +92,7 @@ def main() -> None:
             table.add_row(
                 agent_data.get("name", "Unknown"),
                 "Agent",
-                (agent_data.get("description") or "").split("\n")[0][:70] + "..."
+                (agent_data.get("description") or "").split("\n")[0][:70] + "...",
             )
 
     # List tools
@@ -103,8 +105,10 @@ def main() -> None:
     # List graphs
     for graph_config in load_configs(ConfigType.GRAPH):
         name = graph_config.get("name", "Unknown")
-        description = (graph_config.get("description") or "").split("\n")[0][:70] + "..."
+        description = (graph_config.get("description") or "").split("\n")[0][
+            :70
+        ] + "..."
         table.add_row(name, "Graph", description)
 
-    console.rule(f"[bold cyan]Available Components[/bold cyan]")
+    console.rule("[bold cyan]Available Components[/bold cyan]")
     console.print(Padding(table, (1, 0, 1, 0)))

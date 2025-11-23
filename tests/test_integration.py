@@ -35,7 +35,7 @@ adapters:
     cadence: 15min
     schema_type: news
 """
-        config_path = tmp_path / "test_config.yaml"
+        config_path = tmp_path / "test_config.yml"
         config_path.write_text(config_content)
 
         farm = ResilientDataFarm(str(config_path))
@@ -115,10 +115,10 @@ class TestDataFarmConfiguration:
 
     def test_config_loader_initialization(self):
         """Test that config loader works"""
-        from marketpilot.utils.config_loader_ import load_config
+        from marketpilot.utils.config_loader import load_config
 
         # This should work with default config
-        config = load_config("src/marketpilot/config/data_farm_config.yaml")
+        config = load_config("src/marketpilot/configs/data/data_farm_config.yml")
 
         assert "adapters" in config
         assert "logging" in config

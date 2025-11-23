@@ -277,7 +277,7 @@ class TestExporterAssetFirstStructure:
         assert meta_dir.exists()
 
         # Check required metadata files
-        assert (meta_dir / "schema_versions.yaml").exists()
+        assert (meta_dir / "schema_versions.yml").exists()
         assert (meta_dir / "manifest.jsonl").exists()
         assert (meta_dir / "pipeline_stats.json").exists()
 

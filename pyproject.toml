@@ -6,8 +6,6 @@ authors = ["Elham Nikbakht Bidgoli <nikbakht.enb4@gmail.com>"]
 readme = "README.md"
 packages = [
     { include = "marketpilot", from = "src" },
-    { include = "schemas" },
-    { include = "example" },
 ]
 
 [tool.poetry.dependencies]

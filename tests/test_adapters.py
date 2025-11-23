@@ -1,9 +1,11 @@
 import pytest
 from unittest.mock import patch
 
-from marketpilot.adapters.price_adapter import ResilientPriceAdapter
-from marketpilot.adapters.news_adapter import ResilientNewsAdapter
-from marketpilot.adapters.fundamental_adapter import ResilientFundamentalAdapter
+from marketpilot.data_farm.adapters.price_adapter import ResilientPriceAdapter
+from marketpilot.data_farm.adapters.news_adapter import ResilientNewsAdapter
+from marketpilot.data_farm.adapters.fundamental_adapter import (
+    ResilientFundamentalAdapter,
+)
 
 
 @pytest.mark.asyncio

@@ -52,7 +52,7 @@ Edit `.env` and replace placeholders with your actual keys.
 
 ```bash
 # Activate environment
-poetry shell
+poetry env activate
 
 # Run tests
 poetry run pytest

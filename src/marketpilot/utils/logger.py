@@ -261,7 +261,7 @@ if __name__ == "__main__":
     setup_logging("INFO")
 
     # Simulate adapter logs from config
-    print("\n📊 Simulating logs from data_farm_config.yaml adapters:")
+    print("\n📊 Simulating logs from data_farm_config.yml adapters:")
 
     # Adapter 1: price_internal_001
     log_event(

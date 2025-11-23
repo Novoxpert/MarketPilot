@@ -30,7 +30,7 @@ Or run directly as a Python module:
 Example Output:
 ---------------
 ────────────────────────────── Graph: trading_intelligence_workflow v1.0 ───────────────────────────────
-A multi-agent trading pipeline that ingests market data, performs analysis, 
+A multi-agent trading pipeline that ingests market data, performs analysis,
 assesses risk, identifies opportunities, and executes trades.
 
 Agentic Workflow
@@ -58,6 +58,7 @@ from rich.padding import Padding
 from typing import Dict, List, TypedDict
 from marketpilot.utils.config_loader import load_config
 
+
 class Node(TypedDict):
     name: str
     type: str
@@ -77,6 +78,7 @@ class WorkflowConfig(TypedDict, total=False):
     description: str
     nodes: List[Node]
     edges: List[Edge]
+
 
 console = Console()
 
@@ -100,13 +102,15 @@ def main(graph_name: str) -> None:
     edges = config.get("edges", [])
 
     # === Print header and description ===
-    console.rule(f"[bold cyan]Graph: {graph_name}[/bold cyan] [green]v{version}[/green]")
+    console.rule(
+        f"[bold cyan]Graph: {graph_name}[/bold cyan] [green]v{version}[/green]"
+    )
     console.print(Padding(description, (1, 0, 1, 0)))
 
     # === Build lookup maps ===
     node_map: Dict[str, Node] = {node["name"]: node for node in nodes}
     adjacency: Dict[str, List[str]] = {node["name"]: [] for node in nodes}
-    
+
     for edge in edges:
         adjacency[edge["from"]].append(edge["to"])
 
@@ -116,7 +120,9 @@ def main(graph_name: str) -> None:
     # === Recursive tree builder ===
     from typing import Optional
 
-    def build_subtree(parent_tree: Tree, node_name: str, visited: Optional[set[str]] = None) -> None:
+    def build_subtree(
+        parent_tree: Tree, node_name: str, visited: Optional[set[str]] = None
+    ) -> None:
         if visited is None:
             visited = set()
 
@@ -135,7 +141,9 @@ def main(graph_name: str) -> None:
             build_subtree(subtree, child, visited.copy())
 
     # === Build and render the tree ===
-    tree = Tree("[bold cyan]Agentic Workflow[/bold cyan]", guide_style="bold bright_blue")
+    tree = Tree(
+        "[bold cyan]Agentic Workflow[/bold cyan]", guide_style="bold bright_blue"
+    )
     for root in root_nodes:
         build_subtree(tree, root)
 

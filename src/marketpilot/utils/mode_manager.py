@@ -82,9 +82,9 @@ class ModeManager:
             return Path("data_test")
         return Path("data")
 
-    def get_config_file(self, config_name: str = "data_farm_config.yaml") -> Path:
+    def get_config_file(self, config_name: str = "data_farm_config.yml") -> Path:
         """Get config file based on mode"""
-        base_path = Path("src/marketpilot/config")
+        base_path = Path("src/marketpilot/configs/data")
 
         if self.is_test_mode:
             # Try test-specific config first

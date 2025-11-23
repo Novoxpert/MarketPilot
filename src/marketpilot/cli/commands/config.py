@@ -76,5 +76,5 @@ def show():
         for k, v in values.items():
             table.add_row(f"  {k}", str(v))
 
-    console.rule(f"[bold cyan]Graph: Marketpilot Configuration[/bold cyan]")
+    console.rule("[bold cyan]Graph: Marketpilot Configuration[/bold cyan]")
     console.print(Padding(table, (1, 0, 1, 0)))

@@ -3,8 +3,8 @@ from typing import Any
 from marketpilot.agentic.agent_manager import AgentManager
 from marketpilot.agentic.agent_types import AgentState
 
-def runner(name: str) -> Any:
 
+def runner(name: str) -> Any:
     manager = AgentManager()
 
     agent = manager.get_agent(name)
@@ -16,9 +16,9 @@ def runner(name: str) -> Any:
         "data": {"symbol": "AAPL"},
         "references": {},
         "messages": [],
-        "log": []
+        "log": [],
     }
 
     result = agent(state)
-    
+
     return result

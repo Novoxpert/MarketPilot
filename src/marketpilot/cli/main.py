@@ -49,22 +49,27 @@ from marketpilot.cli.commands import run_target, visualize_graph, list_targets, 
 
 console = Console()
 
+
 def show_banner():
     """Display a welcome banner at the start of the interactive session."""
     console.print(
-        Padding(Panel.fit(
-            "[bold cyan]Welcome to Marketpilot Interactive CLI[/bold cyan]\n"
-            "Type [green]help[/green] to see available commands or [red]exit[/red] to quit.",
-            border_style="magenta",
-        ), (0, 0, 1, 0))
+        Padding(
+            Panel.fit(
+                "[bold cyan]Welcome to Marketpilot Interactive CLI[/bold cyan]\n"
+                "Type [green]help[/green] to see available commands or [red]exit[/red] to quit.",
+                border_style="magenta",
+            ),
+            (0, 0, 1, 0),
+        )
     )
+
 
 def show_help():
     """Display the help panel listing all available CLI commands."""
     console.print(
         Padding(
             Panel.fit(
-            """[bold yellow]Available Commands:[/bold yellow]
+                """[bold yellow]Available Commands:[/bold yellow]
   [cyan]run <target>/<name>[/cyan]     → Run an agent, tool, or graph workflow by specifying its name
   [cyan]visualize-graph <name>[/cyan]  → Visualize a graph / workflow definition
   [cyan]list-targets[/cyan]            → List all available agents, tools, and graphs
@@ -72,10 +77,12 @@ def show_help():
   [cyan]clear[/cyan]                   → Clear the console
   [cyan]help[/cyan]                    → Show this help menu
   [cyan]exit[/cyan]                    → Quit the shell""",
-            border_style="yellow",
-        ), (0, 0, 1, 0)
+                border_style="yellow",
+            ),
+            (0, 0, 1, 0),
         )
     )
+
 
 def main():
     """Start the Marketpilot interactive console and handle user commands."""
@@ -83,7 +90,9 @@ def main():
 
     while True:
         try:
-            command = Prompt.ask("[bold magenta]λ[/bold magenta]", default="help").strip()
+            command = Prompt.ask(
+                "[bold magenta]λ[/bold magenta]", default="help"
+            ).strip()
 
             if not command:
                 continue
@@ -114,12 +123,23 @@ def main():
                 config.show()
 
             else:
-                console.print(Padding(f"[red]Unknown command:[/red] {command}. Type [green]help[/green] for options.", (0, 0, 1, 0)))
+                console.print(
+                    Padding(
+                        f"[red]Unknown command:[/red] {command}. Type [green]help[/green] for options.",
+                        (0, 0, 1, 0),
+                    )
+                )
 
         except KeyboardInterrupt:
-            console.print(Padding("\n[bold red]Interrupted. Type 'exit' to quit.[/bold red]", (0, 0, 1, 0)))
+            console.print(
+                Padding(
+                    "\n[bold red]Interrupted. Type 'exit' to quit.[/bold red]",
+                    (0, 0, 1, 0),
+                )
+            )
         except Exception as e:
             console.print(Padding(f"[bold red]Error:[/bold red] {e}", (0, 0, 1, 0)))
+
 
 if __name__ == "__main__":
     main()
