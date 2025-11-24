@@ -35,7 +35,6 @@ langchain-core = "^1.1.0"
 pytest = "^8.4.2"
 black = "^25.9.0"
 flake8 = "^7.3.0"
-pre-commit = "^4.3.0"
 pytest-asyncio = "^1.2.0"
 
 [tool.pytest.ini_options]
