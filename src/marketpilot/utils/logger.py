@@ -25,6 +25,7 @@ _LOG_STRUCTURE_INITIALIZED = False
 
 def _get_log_base_dir() -> Path:
     """Get base log directory based on mode"""
+    # logs_test or log
     return get_mode_manager().get_log_dir()
 
 
@@ -223,34 +224,6 @@ def get_log_files() -> Dict[str, list]:
 
     return result
 
-
-def get_adapter_logs(adapter_id: str) -> list:
-    """
-    Get all log entries for a specific adapter.
-
-    Args:
-        adapter_id: Adapter ID from config (e.g., 'price_internal_001')
-
-    Returns:
-        List of log entries (dicts)
-    """
-    base = _get_log_base_dir()
-    adapter_file = base / "adapters" / f"{adapter_id}_adapter.jsonl"
-
-    if not adapter_file.exists():
-        return []
-
-    logs = []
-    with open(adapter_file, "r", encoding="utf-8") as f:
-        for line in f:
-            try:
-                logs.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-
-    return logs
-
-
 # Example usage
 if __name__ == "__main__":
     print("=" * 60)
@@ -318,7 +291,3 @@ if __name__ == "__main__":
     print("🔍 Reading Adapter Logs:")
     print("=" * 60)
 
-    logs = get_adapter_logs("price_internal_001")
-    print(f"\n  price_internal_001_adapter.jsonl ({len(logs)} entries):")
-    for log in logs:
-        print(f"    [{log['level']}] {log['message']}")

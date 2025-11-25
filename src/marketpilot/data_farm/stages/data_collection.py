@@ -1,5 +1,6 @@
 """
 Data Collection Stage - Process already fetched data
+Fixed to properly handle news data structure
 """
 
 from typing import Dict, Any
@@ -57,6 +58,7 @@ class DataCollectionStage(BaseStage):
             )
 
             for symbol, records in raw_data_by_type["price"].items():
+                # Handle list of records (new API format)
                 if isinstance(records, list):
                     for record in records:
                         collected_records.append(
@@ -86,23 +88,88 @@ class DataCollectionStage(BaseStage):
                         }
                     )
 
-        # Process news data - UPDATED for new structure
+        # Process news data 
         if "news" in raw_data_by_type:
             adapter_info = adapter_mapping.get(
                 "news", {"id": "news_unknown", "vendor": "unknown"}
             )
 
             for symbol, news_response in raw_data_by_type["news"].items():
-                # news_response is the full response from adapter with structure:
                 # {"symbol": "...", "startdate": "...", "enddate": "...", "timestamp": "...", "data": [...]}
 
-                if isinstance(news_response, dict):
+                log_event(
+                    stage=self.stage_name,
+                    block="data_collection",
+                    level="DEBUG",
+                    msg=f"Processing news for {symbol}",
+                    extra={
+                        "symbol": symbol,
+                        "response_type": type(news_response).__name__,
+                        "has_data_field": "data" in news_response
+                        if isinstance(news_response, dict)
+                        else False,
+                    },
+                )
+
+                if isinstance(news_response, dict) and "data" in news_response:
                     # Get the array of news articles from 'data' field
                     news_articles = news_response.get("data", [])
+
+                    log_event(
+                        stage=self.stage_name,
+                        block="data_collection",
+                        level="DEBUG",
+                        msg=f"Found {len(news_articles) if isinstance(news_articles, list) else 0} articles for {symbol}",
+                    )
 
                     # If news_articles is a list, process each article
                     if isinstance(news_articles, list):
                         for article in news_articles:
+                            if isinstance(article, dict):
+                                collected_records.append(
+                                    {
+                                        "adapter_id": adapter_info["id"],
+                                        "symbol": symbol,
+                                        "vendor": adapter_info["vendor"],
+                                        "schema_type": "news",
+                                        "data": article,
+                                        "ingested_at": article.get(
+                                            "published_at_utc",
+                                            article.get("releasedAt"),
+                                        ),
+                                    }
+                                )
+                    else:
+                        log_event(
+                            stage=self.stage_name,
+                            block="data_collection",
+                            level="WARNING",
+                            msg=f"Unexpected news data format for {symbol} - not a list",
+                        )
+                        if isinstance(news_articles, dict):
+                            collected_records.append(
+                                {
+                                    "adapter_id": adapter_info["id"],
+                                    "symbol": symbol,
+                                    "vendor": adapter_info["vendor"],
+                                    "schema_type": "news",
+                                    "data": news_articles,
+                                    "ingested_at": news_articles.get(
+                                        "published_at_utc",
+                                        news_articles.get("releasedAt"),
+                                    ),
+                                }
+                            )
+                elif isinstance(news_response, list):
+                    # Fallback: if it's already a list of articles (shouldn't happen)
+                    log_event(
+                        stage=self.stage_name,
+                        block="data_collection",
+                        level="WARNING",
+                        msg=f"News response is already a list for {symbol} - processing directly",
+                    )
+                    for article in news_response:
+                        if isinstance(article, dict):
                             collected_records.append(
                                 {
                                     "adapter_id": adapter_info["id"],
@@ -110,38 +177,22 @@ class DataCollectionStage(BaseStage):
                                     "vendor": adapter_info["vendor"],
                                     "schema_type": "news",
                                     "data": article,
-                                    "ingested_at": article.get("published_at_utc"),
+                                    "ingested_at": article.get(
+                                        "published_at_utc", article.get("releasedAt")
+                                    ),
                                 }
                             )
-                    else:
-                        # Single article (shouldn't happen with new adapter, but handle it)
-                        collected_records.append(
-                            {
-                                "adapter_id": adapter_info["id"],
-                                "symbol": symbol,
-                                "vendor": adapter_info["vendor"],
-                                "schema_type": "news",
-                                "data": news_articles,
-                                "ingested_at": (
-                                    news_articles.get("published_at_utc")
-                                    if isinstance(news_articles, dict)
-                                    else None
-                                ),
-                            }
-                        )
-                elif isinstance(news_response, list):
-                    # Fallback: if it's already a list of articles (old format)
-                    for article in news_response:
-                        collected_records.append(
-                            {
-                                "adapter_id": adapter_info["id"],
-                                "symbol": symbol,
-                                "vendor": adapter_info["vendor"],
-                                "schema_type": "news",
-                                "data": article,
-                                "ingested_at": article.get("published_at_utc"),
-                            }
-                        )
+                else:
+                    log_event(
+                        stage=self.stage_name,
+                        block="data_collection",
+                        level="ERROR",
+                        msg=f"Unexpected news data structure for {symbol}",
+                        extra={
+                            "symbol": symbol,
+                            "type": type(news_response).__name__,
+                        },
+                    )
 
         # Process fundamental data
         if "fundamental" in raw_data_by_type:
@@ -185,6 +236,25 @@ class DataCollectionStage(BaseStage):
                 "schema_types": list(
                     set(r.get("schema_type", "unknown") for r in collected_records)
                 ),
+                "by_type": {
+                    "price": len(
+                        [
+                            r
+                            for r in collected_records
+                            if r.get("schema_type") == "price"
+                        ]
+                    ),
+                    "news": len(
+                        [r for r in collected_records if r.get("schema_type") == "news"]
+                    ),
+                    "fundamental": len(
+                        [
+                            r
+                            for r in collected_records
+                            if r.get("schema_type") == "fundamental"
+                        ]
+                    ),
+                },
                 "adapter_mapping": adapter_mapping,
             },
         )

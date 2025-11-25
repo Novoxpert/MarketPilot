@@ -1,5 +1,5 @@
 """
-ResilientDataFarm - Complete implementation with data fetching and storage
+ResilientDataFarm - Complete implementation
 """
 
 from typing import Dict, Any, List, Optional
@@ -14,6 +14,7 @@ from marketpilot.data_farm.adapters.news_adapter import ResilientNewsAdapter
 from marketpilot.data_farm.adapters.fundamental_adapter import (
     ResilientFundamentalAdapter,
 )
+
 
 # Import all pipeline stages
 from marketpilot.data_farm.stages.health_check import HealthCheckStage
@@ -50,7 +51,7 @@ class ResilientDataFarm:
 
         # Load configuration
         self.config = load_config(config_path)
-        self.adapters: Dict[str, BaseAdapter] = {}  # Changed to dict for easy lookup
+        self.adapters: Dict[str, BaseAdapter] = {}
         self.adapters_by_type: Dict[str, List[BaseAdapter]] = {
             "price": [],
             "news": [],
@@ -206,7 +207,7 @@ class ResilientDataFarm:
         Fetch data for multiple symbols across all adapters
 
         Args:
-            symbols: List of symbols to fetch (e.g., ["BINANCE:BTCUSDT.P"])
+            symbols: List of symbols to fetch
             data_types: Optional list of data types to fetch (default: all)
 
         Returns:
@@ -214,7 +215,6 @@ class ResilientDataFarm:
         """
         fetch_start = datetime.utcnow()
 
-        # Default to all data types if not specified
         if data_types is None:
             data_types = ["price", "news", "fundamental"]
 
@@ -258,7 +258,7 @@ class ResilientDataFarm:
                 )
                 continue
 
-            # Use first adapter for each type (can be enhanced for fallback logic)
+            # Use first adapter for each type
             adapter = adapters[0]
 
             log_event(
@@ -303,12 +303,7 @@ class ResilientDataFarm:
     ):
         """
         Fetch data for a single symbol using specified adapter
-
-        Args:
-            adapter: Adapter instance to use
-            symbol: Symbol to fetch
-            data_type: Type of data (price, news, fundamental)
-            results: Results dictionary to update
+        FIXED: Properly handles news data structure
         """
         try:
             log_event(
@@ -328,17 +323,31 @@ class ResilientDataFarm:
 
             if fetch_result.get("success"):
                 # Get data from result
-                data = fetch_result.get("data", [])
+                data = fetch_result.get("data")
 
-                # Handle both list and dict responses
-                if not isinstance(data, list):
-                    data = [data] if data else []
-
-                # Store data
-                results["raw_data"][data_type][symbol] = data
+                # CRITICAL FIX: Store data based on type
+                if data_type == "news":
+                    # For news, data is the full structure: {"symbol": "...", "data": [...], ...}
+                    results["raw_data"][data_type][symbol] = data
+                    record_count = (
+                        len(data.get("data", [])) if isinstance(data, dict) else 0
+                    )
+                elif data_type == "price":
+                    # For price, data is a list of records
+                    if isinstance(data, list):
+                        results["raw_data"][data_type][symbol] = data
+                        record_count = len(data)
+                    else:
+                        results["raw_data"][data_type][symbol] = [data] if data else []
+                        record_count = 1 if data else 0
+                else:
+                    # Generic: store as-is
+                    if not isinstance(data, list):
+                        data = [data] if data else []
+                    results["raw_data"][data_type][symbol] = data
+                    record_count = len(data) if isinstance(data, list) else 1
 
                 # Update metrics
-                record_count = len(data) if isinstance(data, list) else 1
                 results["fetch_summary"]["successful_fetches"] += 1
                 results["fetch_summary"]["total_records"] += record_count
 
@@ -366,8 +375,11 @@ class ResilientDataFarm:
                     }
                 )
 
-                # Initialize empty list for failed fetch
-                results["raw_data"][data_type][symbol] = []
+                # Initialize empty structure
+                if data_type == "news":
+                    results["raw_data"][data_type][symbol] = {"data": []}
+                else:
+                    results["raw_data"][data_type][symbol] = []
 
                 log_event(
                     stage="data_fetch",
@@ -392,8 +404,10 @@ class ResilientDataFarm:
                 }
             )
 
-            # Initialize empty list for exception
-            results["raw_data"][data_type][symbol] = []
+            if data_type == "news":
+                results["raw_data"][data_type][symbol] = {"data": []}
+            else:
+                results["raw_data"][data_type][symbol] = []
 
             log_event(
                 stage="data_fetch",
@@ -406,16 +420,7 @@ class ResilientDataFarm:
     async def _execute_complete_pipeline(
         self, symbols: List[str], data_types: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """
-        Execute complete end-to-end pipeline with all stages
-
-        Args:
-            symbols: List of symbols to process
-            data_types: Optional list of data types to fetch
-
-        Returns:
-            Complete pipeline results with validation report
-        """
+        """Execute complete end-to-end pipeline with all stages"""
         pipeline_start = datetime.utcnow()
 
         log_event(
@@ -431,7 +436,7 @@ class ResilientDataFarm:
         )
 
         try:
-            # Step 1: Fetch data from API
+            # Step 1: Fetch data
             log_event(
                 stage="pipeline",
                 block="execution",
@@ -441,7 +446,6 @@ class ResilientDataFarm:
 
             fetch_results = await self.fetch_data_for_symbols(symbols, data_types)
 
-            # Check if fetch was successful
             if fetch_results["fetch_summary"]["failed_fetches"] > 0:
                 log_event(
                     stage="pipeline",
@@ -456,22 +460,16 @@ class ResilientDataFarm:
                     },
                 )
 
-            # Check if we have any data at all
             if fetch_results["fetch_summary"]["total_records"] == 0:
                 log_event(
                     stage="pipeline",
                     block="execution",
                     level="ERROR",
                     msg="No data fetched - cannot proceed with pipeline",
-                    extra={
-                        "symbols": symbols,
-                        "data_types": data_types,
-                        "errors": fetch_results["errors"],
-                    },
                 )
                 raise ValueError("No data fetched from any source")
 
-            # Initialize pipeline data with fetched data
+            # Initialize pipeline data
             pipeline_data = {
                 "pipeline_start": pipeline_start.isoformat(),
                 "adapters": list(self.adapters.values()),
@@ -482,7 +480,7 @@ class ResilientDataFarm:
                 "fetch_errors": fetch_results.get("errors", []),
             }
 
-            # Step 2: Execute each stage sequentially
+            # Step 2: Execute stages
             log_event(
                 stage="pipeline",
                 block="execution",
@@ -498,10 +496,8 @@ class ResilientDataFarm:
                     msg=f"Executing stage: {stage.stage_name}",
                 )
 
-                # Execute stage
                 pipeline_data = await stage.execute(pipeline_data)
 
-                # Log stage completion
                 log_event(
                     stage="pipeline",
                     block="execution",
@@ -509,7 +505,7 @@ class ResilientDataFarm:
                     msg=f"Completed stage: {stage.stage_name}",
                 )
 
-            # Step 3: Validate pipeline schema consistency
+            # Step 3: Validate
             log_event(
                 stage="pipeline",
                 block="validation",
@@ -521,19 +517,12 @@ class ResilientDataFarm:
                 validation_report = validate_pipeline_stages(pipeline_data)
                 pipeline_data["validation_report"] = validation_report
 
-                # Log validation results
                 if validation_report["validation_passed"]:
                     log_event(
                         stage="pipeline",
                         block="validation",
                         level="INFO",
                         msg="Schema validation PASSED",
-                        extra={
-                            "stages_validated": len(
-                                validation_report.get("stages_validated", [])
-                            ),
-                            "warnings": len(validation_report.get("warnings", [])),
-                        },
                     )
                 else:
                     log_event(
@@ -541,25 +530,18 @@ class ResilientDataFarm:
                         block="validation",
                         level="ERROR",
                         msg="Schema validation FAILED",
-                        extra={
-                            "errors": validation_report.get("errors", []),
-                            "warnings": validation_report.get("warnings", []),
-                        },
+                        extra={"errors": validation_report.get("errors", [])},
                     )
             except Exception as validation_error:
                 log_event(
                     stage="pipeline",
                     block="validation",
                     level="WARNING",
-                    msg=f"Schema validation error (non-critical): {str(validation_error)}",
-                    extra={"error": str(validation_error)},
+                    msg=f"Schema validation error: {str(validation_error)}",
                 )
-                # Create a minimal validation report
                 pipeline_data["validation_report"] = {
                     "validation_passed": False,
-                    "errors": [f"Validation failed: {str(validation_error)}"],
-                    "warnings": [],
-                    "stages_validated": [],
+                    "errors": [str(validation_error)],
                 }
 
             # Pipeline complete
@@ -571,16 +553,7 @@ class ResilientDataFarm:
                 block="execution",
                 level="INFO",
                 msg="Complete pipeline execution finished",
-                extra={
-                    "total_duration_seconds": pipeline_duration,
-                    "stages_completed": len(self.stages),
-                    "validation_passed": pipeline_data.get("validation_report", {}).get(
-                        "validation_passed", False
-                    ),
-                    "total_records_processed": fetch_results["fetch_summary"][
-                        "total_records"
-                    ],
-                },
+                extra={"total_duration_seconds": pipeline_duration},
             )
 
             pipeline_data["pipeline_end"] = pipeline_end.isoformat()
@@ -597,45 +570,23 @@ class ResilientDataFarm:
                 block="execution",
                 level="ERROR",
                 msg=f"Pipeline execution failed: {str(e)}",
-                extra={
-                    "duration_seconds": pipeline_duration,
-                    "error": str(e),
-                },
+                extra={"duration_seconds": pipeline_duration, "error": str(e)},
             )
-
             raise
 
     async def run_complete_pipeline(
         self, symbols: List[str], data_types: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """
-        Public method to run complete end-to-end pipeline
-
-        Args:
-            symbols: List of symbols to process
-            data_types: Optional list of data types to fetch (default: all)
-
-        Returns:
-            Pipeline results with validation report
-        """
+        """Public method to run complete end-to-end pipeline"""
         return await self._execute_complete_pipeline(symbols, data_types)
 
     async def run_smoke_test(self, symbols: List[str]) -> Dict[str, Any]:
-        """
-        Run smoke test across all adapters for given symbols
-
-        Args:
-            symbols: List of asset symbols to test
-
-        Returns:
-            Dictionary with test results
-        """
+        """Run smoke test across all adapters"""
         log_event(
             stage="smoke_test",
             block="data_farm",
             level="INFO",
             msg="Starting smoke test",
-            extra={"symbols": symbols, "adapter_count": len(self.adapters)},
         )
 
         results = {
@@ -654,10 +605,11 @@ class ResilientDataFarm:
                     result = await adapter.execute_ingest(symbol)
 
                     if result.get("success"):
-                        # Get record count
                         data = result.get("data", [])
                         if isinstance(data, list):
                             record_count = len(data)
+                        elif isinstance(data, dict) and "data" in data:
+                            record_count = len(data.get("data", []))
                         else:
                             record_count = 1 if data else 0
 
@@ -697,7 +649,7 @@ class ResilientDataFarm:
         log_event(
             stage="smoke_test",
             block="data_farm",
-            level="INFO" if results["failed"] == 0 else "WARNING",
+            level="INFO",
             msg="Smoke test completed",
             extra={
                 "total": results["total_tests"],
@@ -713,15 +665,7 @@ class ResilientDataFarm:
         return self.adapters
 
     def get_adapters_by_type(self, data_type: str) -> List[BaseAdapter]:
-        """
-        Get adapters for specific data type
-
-        Args:
-            data_type: Type of data (price, news, fundamental)
-
-        Returns:
-            List of adapters for that type
-        """
+        """Get adapters for specific data type"""
         return self.adapters_by_type.get(data_type, [])
 
     def get_config(self) -> Dict[str, Any]:

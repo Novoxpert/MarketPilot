@@ -1,5 +1,6 @@
+
 """
-Quality Assurance Stage - Validate data quality with configurable thresholds
+real API data (price and news)
 """
 
 from typing import Dict, Any, List
@@ -192,16 +193,41 @@ class QualityAssuranceStage(BaseStage):
         issues = []
 
         if not rules:
-            rules = ["no_duplicates", "content_quality"]
+            rules = ["content_quality"]
 
-        # Check for title or content
+        # Check for title, subtitle, or content (flexible for different APIs)
         if "content_quality" in rules:
-            if "title" not in record_data and "content" not in record_data:
-                issues.append("Missing both title and content")
+            has_content = (
+                ("title" in record_data and record_data.get("title"))
+                or ("subtitle" in record_data and record_data.get("subtitle"))
+                or ("content" in record_data and record_data.get("content"))
+            )
+            if not has_content:
+                issues.append("Missing title, subtitle, and content")
 
-        # Check for source
-        if "source" not in record_data:
+        # Check for source (flexible field names)
+        has_source = (
+            ("source" in record_data and record_data.get("source"))
+            or ("source_name" in record_data and record_data.get("source_name"))
+            or ("sourceName" in record_data and record_data.get("sourceName"))
+        )
+        if not has_source:
             issues.append("Missing news source")
+
+        # Check for unique identifier
+        if "no_duplicates" in rules:
+            has_id = (
+                ("news_id" in record_data and record_data.get("news_id"))
+                or ("slug" in record_data and record_data.get("slug"))
+                or ("id" in record_data and record_data.get("id"))
+            )
+            if not has_id:
+                issues.append("Missing news identifier")
+
+        # Symbol mapping check (if rule is enabled)
+        if "symbol_mapping" in rules:
+            if "primary_symbol" not in record_data:
+                issues.append("Missing primary_symbol for symbol mapping")
 
         return issues
 
@@ -212,10 +238,19 @@ class QualityAssuranceStage(BaseStage):
         issues = []
 
         # Check for metric and value
-        if "metric" not in record_data:
+        if "metric" not in record_data or not record_data.get("metric"):
             issues.append("Missing metric name")
 
-        if "value" not in record_data:
+        if "value" not in record_data or record_data.get("value") is None:
             issues.append("Missing metric value")
+
+        # Metric consistency check
+        if "metric_consistency" in rules:
+            try:
+                value = record_data.get("value")
+                if value is not None:
+                    float(value)  # Just check if it's numeric
+            except (ValueError, TypeError):
+                issues.append("Invalid metric value (not numeric)")
 
         return issues

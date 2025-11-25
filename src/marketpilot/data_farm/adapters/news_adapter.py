@@ -1,33 +1,38 @@
 """
-Resilient News Adapter using Internal News API
+Resilient News Adapter
 """
 
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 import os
-import aiohttp
 from urllib.parse import urlencode
 from marketpilot.data_farm.adapters.base_adapter import BaseAdapter
 from marketpilot.utils.logger import log_event
 from marketpilot.data_farm.utils.symbol_mapper import map_symbol_to_slug
+from marketpilot.data_farm.utils.api_retry_handler import create_retry_handler
 
 
 class ResilientNewsAdapter(BaseAdapter):
-    """News data adapter using internal News API"""
+    """News data adapter with shared retry mechanism"""
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
 
-        # Base URL from environment
+        # API configuration
         self.api_base_url = os.getenv("NEWS_API_BASE_URL")
-
         if not self.api_base_url:
-            raise ValueError(
-                "NEWS_API_BASE_URL not found. Please set it in your .env file."
-            )
+            raise ValueError("NEWS_API_BASE_URL not found in environment")
 
-        # Default limit for news articles
         self.default_limit = config.get("limit", 100)
+
+        # Initialize retry handler
+        self.retry_handler = create_retry_handler(
+            adapter_id=self.adapter_id,
+            max_retries=config.get("max_retries", 3),
+            retry_delay=config.get("retry_delay", 2.0),
+            backoff_factor=config.get("backoff_factor", 2.0),
+            timeout=config.get("timeout", 30),
+        )
 
         log_event(
             stage="initialization",
@@ -41,19 +46,6 @@ class ResilientNewsAdapter(BaseAdapter):
             },
         )
 
-    def _map_symbol_to_asset_slug(self, symbol: str) -> str:
-        """
-        Map trading symbol to asset slug format expected by API
-        Uses centralized symbol_mapper utility
-
-        Args:
-            symbol: Trading symbol (e.g., "BINANCE:BTCUSDT.P", "BTC", "AAPL")
-
-        Returns:
-            Asset slug (e.g., "bitcoin", "ethereum")
-        """
-        return map_symbol_to_slug(symbol)
-
     def _build_api_url(
         self,
         asset_slug: str,
@@ -61,10 +53,10 @@ class ResilientNewsAdapter(BaseAdapter):
         end: Optional[datetime],
         limit: int = 100,
     ) -> str:
-        """Build API URL with proper parameters"""
+        """Build API URL"""
         if start is None or end is None:
             end = datetime.utcnow()
-            start = end - timedelta(days=1)  # Default: last 24 hours
+            start = end - timedelta(days=1)
 
         params = {
             "asset_slug": asset_slug,
@@ -83,29 +75,16 @@ class ResilientNewsAdapter(BaseAdapter):
         start: datetime,
         end: datetime,
     ) -> Dict[str, Any]:
-        """
-        Transform API response to match expected schema format
-
-        Args:
-            api_data: List of news articles from API
-            symbol: Original symbol
-            start: Start datetime
-            end: End datetime
-
-        Returns:
-            Transformed data matching news schema
-        """
+        """Transform API response to schema format"""
         transformed_articles = []
 
         for article in api_data:
-            # Extract assets and find primary asset
             assets = article.get("assets", [])
             primary_symbol = assets[0].get("symbol") if assets else symbol
 
-            # Build transformed article
             transformed_article = {
                 "news_id": article.get("slug", ""),
-                "symbol": symbol,  # Keep original symbol
+                "symbol": symbol,
                 "primary_symbol": primary_symbol,
                 "published_at_utc": article.get("releasedAt", ""),
                 "title": article.get("title", ""),
@@ -115,14 +94,11 @@ class ResilientNewsAdapter(BaseAdapter):
                 "source_url": article.get("sourceUrl", ""),
                 "assets": assets,
                 "asset_count": len(assets),
-                "mapping_confidence": (
-                    1.0 if assets else 0.5
-                ),  # High confidence if assets present
+                "mapping_confidence": 1.0 if assets else 0.5,
             }
 
             transformed_articles.append(transformed_article)
 
-        # Return in expected schema format
         return {
             "symbol": symbol,
             "startdate": start.isoformat(),
@@ -137,13 +113,12 @@ class ResilientNewsAdapter(BaseAdapter):
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """Execute ingestion with proper error handling"""
+        """Execute ingestion using shared retry handler"""
 
         try:
             # Map symbol to asset slug
-            asset_slug = self._map_symbol_to_asset_slug(symbol)
+            asset_slug = map_symbol_to_slug(symbol)
 
-            # Set default time range if not provided
             if start is None or end is None:
                 end = datetime.utcnow()
                 start = end - timedelta(days=1)
@@ -160,61 +135,36 @@ class ResilientNewsAdapter(BaseAdapter):
                     "symbol": symbol,
                     "asset_slug": asset_slug,
                     "url": url,
-                    "start": start.isoformat(),
-                    "end": end.isoformat(),
                 },
             )
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url, timeout=aiohttp.ClientTimeout(total=30)
-                ) as response:
-                    if response.status != 200:
-                        error_msg = f"API returned status {response.status}"
-                        text = await response.text()
-                        log_event(
-                            stage="ingestion",
-                            block="adapter",
-                            level="ERROR",
-                            msg=error_msg,
-                            extra={
-                                "status": response.status,
-                                "response": text[:200],
-                                "symbol": symbol,
-                            },
-                        )
-                        self.log_error(symbol, error_msg)
-                        return {
-                            "success": False,
-                            "error": error_msg,
-                            "vendor": self.vendor,
-                            "status_code": response.status,
-                        }
+            # Use shared retry handler
+            status_code, api_response = await self.retry_handler.fetch_with_retry(
+                url=url, symbol=symbol, method="GET"
+            )
 
-                    api_response = await response.json()
-
-            # Check API response success flag
-            if not api_response.get("success", False):
-                error_msg = "API returned success=false"
-                log_event(
-                    stage="ingestion",
-                    block="adapter",
-                    level="ERROR",
-                    msg=error_msg,
-                    extra={
-                        "symbol": symbol,
-                        "asset_slug": asset_slug,
-                        "api_response": str(api_response)[:200],
-                    },
+            # Check if request succeeded
+            if status_code != 200 or api_response is None:
+                error_msg = (
+                    f"API returned status {status_code}"
+                    if status_code > 0
+                    else "Request failed after retries"
                 )
                 self.log_error(symbol, error_msg)
                 return {
                     "success": False,
                     "error": error_msg,
                     "vendor": self.vendor,
+                    "status_code": status_code,
                 }
 
-            # Extract data from response
+            # Check API success flag
+            if not api_response.get("success", False):
+                error_msg = "API returned success=false"
+                self.log_error(symbol, error_msg)
+                return {"success": False, "error": error_msg, "vendor": self.vendor}
+
+            # Extract data
             news_data = api_response.get("data", [])
             pagination = api_response.get("pagination", {})
 
@@ -223,14 +173,8 @@ class ResilientNewsAdapter(BaseAdapter):
                     stage="ingestion",
                     block="adapter",
                     level="WARNING",
-                    msg=f"No news data returned for symbol {symbol}",
-                    extra={
-                        "adapter_id": self.adapter_id,
-                        "symbol": symbol,
-                        "asset_slug": asset_slug,
-                    },
+                    msg=f"No news data returned for {symbol}",
                 )
-                # Return empty result but still valid format
                 empty_result = {
                     "symbol": symbol,
                     "startdate": start.isoformat(),
@@ -243,18 +187,13 @@ class ResilientNewsAdapter(BaseAdapter):
                     "data": empty_result,
                     "vendor": self.vendor,
                     "record_count": 0,
-                    "metadata": {
-                        "pagination": pagination,
-                        "asset_slug": asset_slug,
-                    },
+                    "metadata": {"pagination": pagination, "asset_slug": asset_slug},
                 }
 
-            # Transform API response to match schema
+            # Transform and validate
             transformed_data = self._transform_api_response(
                 news_data, symbol, start, end
             )
-
-            # Validate schema for transformed data
             self.validate_schema(transformed_data)
 
             record_count = len(news_data)
@@ -267,10 +206,7 @@ class ResilientNewsAdapter(BaseAdapter):
                 extra={
                     "adapter_id": self.adapter_id,
                     "symbol": symbol,
-                    "asset_slug": asset_slug,
                     "record_count": record_count,
-                    "mode": "latest" if (start is None or end is None) else "range",
-                    "pagination": pagination,
                 },
             )
 
@@ -292,51 +228,7 @@ class ResilientNewsAdapter(BaseAdapter):
                 },
             }
 
-        except aiohttp.ClientError as e:
-            error_msg = f"Network error: {str(e)}"
-            self.log_error(symbol, error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "vendor": self.vendor,
-            }
-
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
             self.log_error(symbol, error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "vendor": self.vendor,
-            }
-
-
-# Example usage
-if __name__ == "__main__":
-    import asyncio
-
-    config = {
-        "vendor": "internal_news_api",
-        "id": "news_internal_001",
-        "cadence": "5min",
-        "schema_type": "news",
-        "limit": 100,
-    }
-
-    adapter = ResilientNewsAdapter(config)
-
-    print("\n=== Fetch latest news (last 24 hours) ===")
-    latest = asyncio.run(adapter.execute_ingest("bitcoin"))
-    print(f"Success: {latest.get('success')}")
-    print(f"Records: {latest.get('record_count', 0)}")
-    if latest.get("success") and latest.get("data"):
-        print(f"Sample article: {latest['data']['data'][0]['title']}")
-
-    print("\n=== Fetch news for specific time range ===")
-    end = datetime.utcnow()
-    start = end - timedelta(hours=6)
-    ranged = asyncio.run(
-        adapter.execute_ingest("BINANCE:BTCUSDT.P", start=start, end=end)
-    )
-    print(f"Success: {ranged.get('success')}")
-    print(f"Records: {ranged.get('record_count', 0)}")
+            return {"success": False, "error": error_msg, "vendor": self.vendor}
