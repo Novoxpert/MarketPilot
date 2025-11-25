@@ -1,5 +1,7 @@
+
 """
 NaN Processing Stage - Handle missing values
+Enhanced to handle news data properly
 """
 
 from typing import Dict, Any
@@ -44,24 +46,18 @@ class NaNProcessingStage(BaseStage):
                 )
 
             record_data = record["data"]
+            schema_type = record.get("schema_type", "unknown")
 
-            # Check each field for NaN/None
-            for key, value in list(record_data.items()):
-                if value is None or (isinstance(value, float) and math.isnan(value)):
-                    nan_count += 1
-                    # Simple strategy: replace with 0
-                    record_data[key] = 0
-                    log_event(
-                        stage=self.stage_name,
-                        block="nan_processing",
-                        level="DEBUG",
-                        msg=f"NaN replaced in field: {key}",
-                        extra={
-                            "symbol": record.get("symbol"),
-                            "adapter_id": record.get("adapter_id"),
-                            "record_index": idx,
-                        },
-                    )
+            # Process based on schema type
+            if schema_type == "price":
+                nan_count += self._process_price_nans(record_data, record, idx)
+            elif schema_type == "news":
+                nan_count += self._process_news_nans(record_data, record, idx)
+            elif schema_type == "fundamental":
+                nan_count += self._process_fundamental_nans(record_data, record, idx)
+            else:
+                # Generic processing for unknown types
+                nan_count += self._process_generic_nans(record_data, record, idx)
 
             processed_records.append(record)
 
@@ -76,3 +72,124 @@ class NaNProcessingStage(BaseStage):
         data["processed_data"] = processed_records
         data["nan_stats"] = {"nan_count": nan_count}
         return data
+
+    def _process_price_nans(
+        self, record_data: Dict[str, Any], record: Dict[str, Any], idx: int
+    ) -> int:
+        """Process NaN values in price data"""
+        nan_count = 0
+        numeric_fields = ["open", "high", "low", "close", "volume"]
+
+        for key in numeric_fields:
+            if key in record_data:
+                value = record_data[key]
+                if value is None or (isinstance(value, float) and math.isnan(value)):
+                    nan_count += 1
+                    record_data[key] = 0
+                    log_event(
+                        stage=self.stage_name,
+                        block="nan_processing",
+                        level="DEBUG",
+                        msg=f"NaN replaced in price field: {key}",
+                        extra={
+                            "symbol": record.get("symbol"),
+                            "adapter_id": record.get("adapter_id"),
+                            "record_index": idx,
+                        },
+                    )
+
+        return nan_count
+
+    def _process_news_nans(
+        self, record_data: Dict[str, Any], record: Dict[str, Any], idx: int
+    ) -> int:
+        """Process NaN values in news data - mostly no action needed for strings"""
+        nan_count = 0
+
+        # For news, we mainly check numeric fields like mapping_confidence
+        numeric_fields = ["mapping_confidence", "asset_count"]
+
+        for key in numeric_fields:
+            if key in record_data:
+                value = record_data[key]
+                if value is None or (isinstance(value, float) and math.isnan(value)):
+                    nan_count += 1
+                    # Set default values
+                    if key == "mapping_confidence":
+                        record_data[key] = 0.5
+                    elif key == "asset_count":
+                        record_data[key] = 0
+
+                    log_event(
+                        stage=self.stage_name,
+                        block="nan_processing",
+                        level="DEBUG",
+                        msg=f"NaN replaced in news field: {key}",
+                        extra={
+                            "symbol": record.get("symbol"),
+                            "adapter_id": record.get("adapter_id"),
+                            "record_index": idx,
+                        },
+                    )
+
+        # Clean empty strings in important text fields
+        text_fields = ["title", "subtitle", "source", "source_name"]
+        for key in text_fields:
+            if key in record_data and record_data[key] == "":
+                record_data[key] = None
+
+        return nan_count
+
+    def _process_fundamental_nans(
+        self, record_data: Dict[str, Any], record: Dict[str, Any], idx: int
+    ) -> int:
+        """Process NaN values in fundamental data"""
+        nan_count = 0
+
+        # Check value field
+        if "value" in record_data:
+            value = record_data["value"]
+            if value is None or (isinstance(value, float) and math.isnan(value)):
+                nan_count += 1
+                record_data["value"] = 0
+                log_event(
+                    stage=self.stage_name,
+                    block="nan_processing",
+                    level="DEBUG",
+                    msg="NaN replaced in fundamental value field",
+                    extra={
+                        "symbol": record.get("symbol"),
+                        "adapter_id": record.get("adapter_id"),
+                        "record_index": idx,
+                    },
+                )
+
+        return nan_count
+
+    def _process_generic_nans(
+        self, record_data: Dict[str, Any], record: Dict[str, Any], idx: int
+    ) -> int:
+        """Generic NaN processing for unknown types"""
+        nan_count = 0
+
+        for key, value in list(record_data.items()):
+            if value is None or (isinstance(value, float) and math.isnan(value)):
+                # Skip string fields and complex objects
+                if isinstance(value, (dict, list)):
+                    continue
+
+                nan_count += 1
+                record_data[key] = 0
+                log_event(
+                    stage=self.stage_name,
+                    block="nan_processing",
+                    level="DEBUG",
+                    msg=f"NaN replaced in field: {key}",
+                    extra={
+                        "symbol": record.get("symbol"),
+                        "adapter_id": record.get("adapter_id"),
+                        "record_index": idx,
+                    },
+                )
+
+        return nan_count

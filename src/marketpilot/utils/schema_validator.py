@@ -2,7 +2,7 @@
 Schema Validator : Validate inter-stage data transfer
 Simple validator to check schema consistency between pipeline stages
 """
-
+# TODO:eli:check which is unnecessary
 from typing import Dict, Any, List, Set
 from marketpilot.utils.logger import log_event
 from marketpilot.utils.config_loader import get_required_columns

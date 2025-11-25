@@ -1,29 +1,35 @@
 """
-Resilient Price Adapter using Internal OHLCV API
+Resilient Price Adapter
 """
 
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 import os
-import aiohttp
 from urllib.parse import urlencode
 from marketpilot.data_farm.adapters.base_adapter import BaseAdapter
 from marketpilot.utils.logger import log_event
+from marketpilot.data_farm.utils.api_retry_handler import create_retry_handler
 
 
 class ResilientPriceAdapter(BaseAdapter):
-    """Price data adapter using internal OHLCV API"""
+    """Price data adapter with shared retry mechanism"""
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
 
-        # Base URL from environment
+        # API configuration
         self.api_base_url = os.getenv("PRICE_API_BASE_URL")
-
         if not self.api_base_url:
-            raise ValueError(
-                "PRICE_API_BASE_URL not found. Please set it in your .env file."
-            )
+            raise ValueError("PRICE_API_BASE_URL not found in environment")
+
+        # Initialize retry handler with config
+        self.retry_handler = create_retry_handler(
+            adapter_id=self.adapter_id,
+            max_retries=config.get("max_retries", 3),
+            retry_delay=config.get("retry_delay", 2.0),
+            backoff_factor=config.get("backoff_factor", 2.0),
+            timeout=config.get("timeout", 30),
+        )
 
         log_event(
             stage="initialization",
@@ -33,6 +39,7 @@ class ResilientPriceAdapter(BaseAdapter):
             extra={
                 "adapter_id": self.adapter_id,
                 "base_url": self.api_base_url,
+                "max_retries": config.get("max_retries", 3),
             },
         )
 
@@ -42,7 +49,7 @@ class ResilientPriceAdapter(BaseAdapter):
         start: Optional[datetime],
         end: Optional[datetime],
     ) -> str:
-        """Build API URL with proper timestamp handling"""
+        """Build API URL"""
         if start is None or end is None:
             end = datetime.utcnow()
             start = end - timedelta(minutes=1)
@@ -60,7 +67,7 @@ class ResilientPriceAdapter(BaseAdapter):
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """Execute ingestion with proper error handling"""
+        """Execute ingestion using shared retry handler"""
 
         try:
             url = self._build_api_url(symbol, start, end)
@@ -75,42 +82,39 @@ class ResilientPriceAdapter(BaseAdapter):
                     "adapter_id": self.adapter_id,
                     "symbol": symbol,
                     "url": url,
-                    "start": start.isoformat() if start else None,
-                    "end": end.isoformat() if end else None,
                 },
             )
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url, timeout=aiohttp.ClientTimeout(total=30)
-                ) as response:
-                    if response.status != 200:
-                        error_msg = f"API returned status {response.status}"
-                        text = await response.text()
-                        log_event(
-                            stage="ingestion",
-                            block="adapter",
-                            level="ERROR",
-                            msg=error_msg,
-                            extra={"status": response.status, "response": text[:200]},
-                        )
-                        self.log_error(symbol, error_msg)
-                        return {
-                            "success": False,
-                            "error": error_msg,
-                            "vendor": self.vendor,
-                            "status_code": response.status,
-                        }
+            # Use shared retry handler
+            status_code, api_response = await self.retry_handler.fetch_with_retry(
+                url=url, symbol=symbol, method="GET"
+            )
 
-                    api_response = await response.json()
+            # Check if request succeeded
+            if status_code != 200 or api_response is None:
+                error_msg = (
+                    f"API returned status {status_code}"
+                    if status_code > 0
+                    else "Request failed after retries"
+                )
+                self.log_error(symbol, error_msg)
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "vendor": self.vendor,
+                    "status_code": status_code,
+                }
+
+
             print("api_response")
             print(api_response)
-            # Check API response success flag
+            # Check API success flag
             if not api_response.get("success", False):
                 error_msg = api_response.get("error", "API returned success=false")
                 self.log_error(symbol, error_msg)
                 return {"success": False, "error": error_msg, "vendor": self.vendor}
 
+            # Extract data
             data_records = api_response.get("data", [])
             metadata = api_response.get("metadata", {})
 
@@ -119,8 +123,7 @@ class ResilientPriceAdapter(BaseAdapter):
                     stage="ingestion",
                     block="adapter",
                     level="WARNING",
-                    msg=f"No data returned for symbol {symbol}",
-                    extra={"adapter_id": self.adapter_id, "symbol": symbol},
+                    msg=f"No data returned for {symbol}",
                 )
                 return {
                     "success": True,
@@ -130,7 +133,7 @@ class ResilientPriceAdapter(BaseAdapter):
                     "metadata": metadata,
                 }
 
-            # Validate schema for first record
+            # Validate schema
             if data_records:
                 self.validate_schema(data_records[0])
 
@@ -145,7 +148,6 @@ class ResilientPriceAdapter(BaseAdapter):
                     "adapter_id": self.adapter_id,
                     "symbol": symbol,
                     "record_count": record_count,
-                    "mode": "latest" if (start is None or end is None) else "range",
                 },
             )
 
@@ -160,40 +162,7 @@ class ResilientPriceAdapter(BaseAdapter):
                 "metadata": metadata,
             }
 
-        except aiohttp.ClientError as e:
-            error_msg = f"Network error: {str(e)}"
-            self.log_error(symbol, error_msg)
-            return {"success": False, "error": error_msg, "vendor": self.vendor}
-
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
             self.log_error(symbol, error_msg)
             return {"success": False, "error": error_msg, "vendor": self.vendor}
-
-
-# Example usage
-if __name__ == "__main__":
-    import asyncio
-
-    config = {
-        "vendor": "internal_api",
-        "id": "price_internal_001",
-        "cadence": "1min",
-        "schema_type": "price",
-    }
-
-    adapter = ResilientPriceAdapter(config)
-
-    print("\n=== Fetch latest candle ===")
-    latest = asyncio.run(adapter.execute_ingest("BINANCE:BTCUSDT.P"))
-    print(f"Success: {latest.get('success')}")
-    print(f"Records: {latest.get('record_count', 0)}")
-
-    print("\n=== Fetch last 10 minutes ===")
-    end = datetime.utcnow()
-    start = end - timedelta(minutes=10)
-    last_10min = asyncio.run(
-        adapter.execute_ingest("BINANCE:BTCUSDT.P", start=start, end=end)
-    )
-    print(f"Success: {last_10min.get('success')}")
-    print(f"Records: {last_10min.get('record_count', 0)}")

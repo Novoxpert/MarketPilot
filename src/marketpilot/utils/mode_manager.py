@@ -82,40 +82,6 @@ class ModeManager:
             return Path("data_test")
         return Path("data")
 
-    def get_config_file(self, config_name: str = "data_farm_config.yml") -> Path:
-        """Get config file based on mode"""
-        base_path = Path("src/marketpilot/configs/data")
-
-        if self.is_test_mode:
-            # Try test-specific config first
-            test_config = base_path / f"test_{config_name}"
-            if test_config.exists():
-                return test_config
-
-        # Fall back to normal config
-        return base_path / config_name
-
-    def get_db_name(self, base_name: str = "marketpilot") -> str:
-        """Get database name based on mode"""
-        if self.is_test_mode:
-            return f"{base_name}_test"
-        return base_name
-
-    def get_env_prefix(self) -> str:
-        """Get environment variable prefix"""
-        if self.is_test_mode:
-            return "TEST_"
-        return ""
-
-    def get_all_paths(self) -> Dict[str, Path]:
-        """Get all environment-specific paths"""
-        return {
-            "log_dir": self.get_log_dir(),
-            "data_dir": self.get_data_dir(),
-            "config_file": self.get_config_file(),
-            "output_dir": self.get_data_dir() / "output",
-        }
-
     def cleanup_test_data(self):
         """Clean up test data (only in test mode)"""
         if not self.is_test_mode:
@@ -187,8 +153,3 @@ if __name__ == "__main__":
     print(f"Current mode: {manager.mode.value}")
     print(f"Log directory: {manager.get_log_dir()}")
     print()
-
-    # Show all paths
-    print("All paths:")
-    for name, path in manager.get_all_paths().items():
-        print(f"  {name}: {path}")

@@ -151,7 +151,7 @@ class BaseAdapter(ABC):
                 extra={"adapter_id": self.adapter_id},
             )
             return True
-
+        #TODO:replace monk with real 
         # Create a mock record for validation
         mock_record = {
             "symbol": data.get("symbol"),

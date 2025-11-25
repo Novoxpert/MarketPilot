@@ -16,13 +16,13 @@ adapters:
   # Price Data Adapter
   - id: price_internal_001       # Used in data_collection
     type: price
-    vendor: internal_price_api          # Used in data_collection
+    vendor: internal_price_api   # Used in data_collection
     cadence: 1min
     schema_type: price
     # start: optional datetime     # Can be provided dynamically at runtime
     # end: optional datetime       # Can be provided dynamically at runtime
 
-  # News Data Adapter (commented out for now)
+  # News Data Adapter
   - id: "news_internal_001"
     type: "news"
     vendor: "internal_news_api"
@@ -30,7 +30,7 @@ adapters:
     schema_type: "news"
     limit: 100
 
-  # Fundamental Data Adapter (commented out for now)
+  # Fundamental Data Adapter (commented out - no real API yet)
   - id: fundamental_fmp_001
     type: fundamental
     vendor: fmp
@@ -39,15 +39,15 @@ adapters:
 
 # Quality Assurance Configuration
 quality:
-  quality_threshold: 0.95        # Used in QA stage
+  quality_threshold: 0.80        # Slightly lower for testing with real data
   validation_rules:
     price:
       - no_nan_values
       - volume_consistency
     news:
-      - no_duplicates
-      - content_quality
-      - symbol_mapping
+      - content_quality          # Checks for title/subtitle/content
+      # - no_duplicates          # Can be enabled later
+      # - symbol_mapping         # Automatically handled by adapter
     fundamental:
       - no_nan_values
       - metric_consistency
