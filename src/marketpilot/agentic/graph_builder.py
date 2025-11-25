@@ -1,11 +1,11 @@
 from langgraph.graph import StateGraph, START, END # type: ignore
 from marketpilot.agentic.agent_types import AgentState
 from marketpilot.agentic.node_registry import AGENT_REGISTRY, CONDITION_FN_REGISTRY
-from marketpilot.utils.config_loader import load_config
+from marketpilot.utils.config_loader import load_config, make_file_path, ConfigType
 from pathlib import Path
 
 def build_dynamic_graph(graph_name: str):
-	config_path: Path = Path(f"configs/graphs/{graph_name}.yml")
+	config_path: Path = make_file_path(ConfigType.GRAPH, graph_name)
 	workflow = load_config(config_path)
 	
 	graph = StateGraph(AgentState)
