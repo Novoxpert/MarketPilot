@@ -4,7 +4,7 @@ Symbol Mapper Utility - Maps trading symbols to asset slugs
 
 from typing import Optional, Dict
 from pathlib import Path
-from marketpilot.utils.config_loader_ import load_config
+from marketpilot.utils.config_loader import load_config
 from marketpilot.utils.logger import log_event
 
 
@@ -16,14 +16,10 @@ class SymbolMapper:
         Initialize SymbolMapper
 
         Args:
-            config_path: Path to symbol_mapping.yaml (optional)
+            config_path: Path to symbol_mapping.yml (optional)
         """
-        if config_path is None:
-            config_path = str(
-                Path(__file__).parent.parent / "config" / "symbol_mapping.yaml"
-            )
-
-        self.config = load_config(config_path)
+        symbol_mapping_path = "src/marketpilot/configs/data/symbol_mapping.yml"
+        self.config = load_config(symbol_mapping_path)
         self.rules = self.config.get("mapping_rules", {})
 
         # Build fast lookup table

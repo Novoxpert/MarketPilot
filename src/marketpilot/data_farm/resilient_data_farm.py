@@ -6,12 +6,14 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 from datetime import datetime
 import asyncio
-from marketpilot.utils.config_loader_ import load_config
+from marketpilot.utils.config_loader import load_config
 from marketpilot.utils.logger import log_event, setup_logging
-from marketpilot.adapters.base_adapter import BaseAdapter
-from marketpilot.adapters.price_adapter import ResilientPriceAdapter
-from marketpilot.adapters.news_adapter import ResilientNewsAdapter
-from marketpilot.adapters.fundamental_adapter import ResilientFundamentalAdapter
+from marketpilot.data_farm.adapters.base_adapter import BaseAdapter
+from marketpilot.data_farm.adapters.price_adapter import ResilientPriceAdapter
+from marketpilot.data_farm.adapters.news_adapter import ResilientNewsAdapter
+from marketpilot.data_farm.adapters.fundamental_adapter import (
+    ResilientFundamentalAdapter,
+)
 
 # Import all pipeline stages
 from marketpilot.data_farm.stages.health_check import HealthCheckStage
@@ -30,7 +32,7 @@ class ResilientDataFarm:
     """Main orchestrator class for Data Farm pipeline with complete data fetching"""
 
     def __init__(
-        self, config_path: str = "src/marketpilot/config/data_farm_config.yaml"
+        self, config_path: str = "src/marketpilot/configs/data/data_farm_config.yml"
     ):
         """
         Initialize ResilientDataFarm

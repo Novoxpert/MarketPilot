@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import os
 import aiohttp
 from urllib.parse import urlencode
-from marketpilot.adapters.base_adapter import BaseAdapter
+from marketpilot.data_farm.adapters.base_adapter import BaseAdapter
 from marketpilot.utils.logger import log_event
 
 

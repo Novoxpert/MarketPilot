@@ -27,7 +27,7 @@ async def run_complete_pipeline():
 
         # Initialize Data Farm
         farm = ResilientDataFarm(
-            config_path="src/marketpilot/config/data_farm_config.yaml"
+            config_path="src/marketpilot/configs/data/data_farm_config.yml"
         )
 
         print("\n" + "=" * 80)

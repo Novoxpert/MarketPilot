@@ -195,7 +195,8 @@ async def main():
                 print("   ✅ PASSED")
                 stages_validated = validation.get("stages_validated", [])
                 if stages_validated:
-                    print(f"   Validated stages: {', '.join(stages_validated)}")
+                    stage_strs = [str(stage) for stage in stages_validated]
+                    print(f"   Validated stages: {', '.join(stage_strs)}")
             else:
                 print("   ❌ FAILED")
                 if validation.get("errors"):
