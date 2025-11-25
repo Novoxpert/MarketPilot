@@ -5,7 +5,7 @@ Inherits schema validation from BaseAdapter
 
 from typing import Dict, Any
 from datetime import datetime, timedelta
-from marketpilot.adapters.base_adapter import BaseAdapter
+from marketpilot.data_farm.adapters.base_adapter import BaseAdapter
 
 
 class ResilientFundamentalAdapter(BaseAdapter):
@@ -57,7 +57,6 @@ class ResilientFundamentalAdapter(BaseAdapter):
                 "enddate": end_date.isoformat(),
                 "data": mock_fundamentals,
             }
-            print("mmmmm")
             #  Validate against schema BEFORE returning
             self.validate_schema(result_data)
 

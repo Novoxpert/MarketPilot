@@ -463,7 +463,7 @@ class TestModeManager:
         """Test get_config_file"""
         manager = get_mode_manager()
         config = manager.get_config_file()
-        assert "data_farm_config.yaml" in str(config)
+        assert "data_farm_config.yml" in str(config)
 
     def test_mode_manager_get_db_name(self):
         """Test get_db_name"""

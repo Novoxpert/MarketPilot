@@ -371,7 +371,7 @@ class DataExportStage(BaseStage):
             },
         }
 
-        with open(meta_dir / "schema_versions.yaml", "w") as f:
+        with open(meta_dir / "schema_versions.yml", "w") as f:
             yaml.dump(schema_versions, f, default_flow_style=False)
 
         # 2. Symbol mapping (original to sanitized)

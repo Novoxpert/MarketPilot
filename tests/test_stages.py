@@ -80,7 +80,7 @@ class TestDataCollectionStage:
     @pytest.fixture
     async def mock_adapter(self):
         """Create a mock adapter for testing"""
-        from marketpilot.adapters.price_adapter import ResilientPriceAdapter
+        from marketpilot.data_farm.adapters.price_adapter import ResilientPriceAdapter
 
         config = {
             "vendor": "yfinance",
@@ -134,8 +134,8 @@ class TestDataCollectionStage:
     @pytest.mark.asyncio
     async def test_data_collection_multiple_adapters(self, collection_stage):
         """Test collection with multiple adapters"""
-        from marketpilot.adapters.price_adapter import ResilientPriceAdapter
-        from marketpilot.adapters.news_adapter import ResilientNewsAdapter
+        from marketpilot.data_farm.adapters.price_adapter import ResilientPriceAdapter
+        from marketpilot.data_farm.adapters.news_adapter import ResilientNewsAdapter
 
         price_adapter = ResilientPriceAdapter(
             {
@@ -174,7 +174,7 @@ class TestDataCollectionStage:
         failing_adapter.execute_ingest = AsyncMock(side_effect=Exception("API Error"))
 
         # Create a working adapter
-        from marketpilot.adapters.price_adapter import ResilientPriceAdapter
+        from marketpilot.data_farm.adapters.price_adapter import ResilientPriceAdapter
 
         working_adapter = ResilientPriceAdapter(
             {
@@ -575,7 +575,7 @@ class TestDataExportStage:
         # Check metadata directory
         meta_dir = tmp_path / "__meta__"
         assert meta_dir.exists(), "Metadata directory should exist"
-        assert (meta_dir / "schema_versions.yaml").exists()
+        assert (meta_dir / "schema_versions.yml").exists()
         assert (meta_dir / "manifest.jsonl").exists()
         assert (meta_dir / "pipeline_stats.json").exists()
 
@@ -699,7 +699,7 @@ class TestDataExportStage:
         import yaml
 
         # Schema versions
-        with open(meta_dir / "schema_versions.yaml") as f:
+        with open(meta_dir / "schema_versions.yml") as f:
             schema_versions = yaml.safe_load(f)
             assert "schemas" in schema_versions
             assert "price" in schema_versions["schemas"]
