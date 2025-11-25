@@ -10,7 +10,7 @@ Supports:
 
 import yaml
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 from enum import Enum
 from loguru import logger
 
@@ -104,37 +104,3 @@ def load_schema(schema_type: str) -> Dict[str, Any]:
     """Load schema file (price_schema.yml, news_schema.yml, ...)"""
     schema_file = SCHEMA_DIR / f"{schema_type}_schema.yml"
     return load_config(schema_file)
-
-
-def validate_data_columns(data: Dict[str, Any], schema_type: str) -> bool:
-    """Validate incoming dataset using schema."""
-    schema = load_schema(schema_type)
-    required = schema.get("required_columns", [])
-
-    data_columns = data.get("columns") if "columns" in data else list(data.keys())
-
-    missing = [c for c in required if c not in data_columns]
-
-    if missing:
-        msg = (
-            f"Missing required columns for schema '{schema_type}': {missing}\n"
-            f"Required: {required}\n"
-            f"Found: {data_columns}"
-        )
-        logger.error(msg)
-        raise ConfigError(msg)
-
-    logger.info(f"Validation OK for schema {schema_type}")
-    return True
-
-
-def get_required_columns(schema_type: str) -> List[str]:
-    return load_schema(schema_type).get("required_columns", [])
-
-
-def get_optional_columns(schema_type: str) -> List[str]:
-    return load_schema(schema_type).get("optional_columns", [])
-
-
-def get_data_types(schema_type: str) -> Dict[str, str]:
-    return load_schema(schema_type).get("data_types", {})

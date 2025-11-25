@@ -1,5 +1,5 @@
 """
-ResilientDataFarm - Complete implementation
+ResilientDataFarm - Main orchestrator for data pipeline
 """
 
 from typing import Dict, Any, List, Optional
@@ -11,12 +11,9 @@ from marketpilot.utils.logger import log_event, setup_logging
 from marketpilot.data_farm.adapters.base_adapter import BaseAdapter
 from marketpilot.data_farm.adapters.price_adapter import ResilientPriceAdapter
 from marketpilot.data_farm.adapters.news_adapter import ResilientNewsAdapter
-from marketpilot.data_farm.adapters.fundamental_adapter import (
-    ResilientFundamentalAdapter,
-)
+from marketpilot.data_farm.adapters.fundamental_adapter import ResilientFundamentalAdapter
 
-
-# Import all pipeline stages
+# Import pipeline stages
 from marketpilot.data_farm.stages.health_check import HealthCheckStage
 from marketpilot.data_farm.stages.data_collection import DataCollectionStage
 from marketpilot.data_farm.stages.nan_processing import NaNProcessingStage
@@ -25,12 +22,11 @@ from marketpilot.data_farm.stages.deduplication import DeduplicationStage
 from marketpilot.data_farm.stages.quality_assurance import QualityAssuranceStage
 from marketpilot.data_farm.stages.data_export import DataExportStage
 
-# Import schema validator
-from marketpilot.utils.schema_validator import validate_pipeline_stages
-
+from dotenv import load_dotenv
+load_dotenv()   # loads .env automatically
 
 class ResilientDataFarm:
-    """Main orchestrator class for Data Farm pipeline with complete data fetching"""
+    """Main orchestrator for Data Farm pipeline"""
 
     def __init__(
         self, config_path: str = "src/marketpilot/configs/data/data_farm_config.yml"
@@ -77,48 +73,33 @@ class ResilientDataFarm:
             stage="initialization",
             block="data_farm",
             level="INFO",
-            msg="ResilientDataFarm initialization complete",
+            msg="ResilientDataFarm initialized",
             extra={
-                "adapters_loaded": len(self.adapters),
-                "stages_loaded": len(self.stages),
-                "config_loaded": bool(self.config),
+                "adapters": len(self.adapters),
+                "stages": len(self.stages),
             },
         )
 
     def _initialize_components(self):
         """Initialize core components (logging, directories)"""
-        log_event(
-            stage="initialization",
-            block="components",
-            level="INFO",
-            msg="Initializing core components",
-        )
-
-        # Setup logging system
+        # Setup logging
         log_level = self.config.get("logging", {}).get("level", "INFO")
         setup_logging(log_level)
 
-        # Create output directories
-        output_dir = self.config.get("output", {}).get("base_dir", "data/output")
+        # Create output directory
+        output_dir = self.config.get("output", {}).get("base_dir", "data_farm_exports")
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
         log_event(
             stage="initialization",
             block="components",
             level="INFO",
-            msg="Core components initialized",
+            msg="Components initialized",
             extra={"log_level": log_level, "output_dir": output_dir},
         )
 
     def _initialize_adapters(self):
         """Initialize all adapters from configuration"""
-        log_event(
-            stage="initialization",
-            block="adapters",
-            level="INFO",
-            msg="Loading adapters from configuration",
-        )
-
         adapters_config = self.config.get("adapters", [])
 
         if not adapters_config:
@@ -139,26 +120,23 @@ class ResilientDataFarm:
 
         # Create adapter instances
         for adapter_config in adapters_config:
-            adapter_type = adapter_config.get("type", "unknown")
-            adapter_id = adapter_config.get("id", "unknown")
+            adapter_type = adapter_config.get("type")
+            adapter_id = adapter_config.get("id")
+
+            if not adapter_type or adapter_type not in adapter_classes:
+                log_event(
+                    stage="initialization",
+                    block="adapters",
+                    level="ERROR",
+                    msg=f"Unknown adapter type: {adapter_type}",
+                    extra={"adapter_id": adapter_id},
+                )
+                continue
 
             try:
-                adapter_class = adapter_classes.get(adapter_type)
-
-                if not adapter_class:
-                    log_event(
-                        stage="initialization",
-                        block="adapters",
-                        level="ERROR",
-                        msg=f"Unknown adapter type: {adapter_type}",
-                        extra={"adapter_id": adapter_id},
-                    )
-                    continue
-
-                # Create adapter instance
+                adapter_class = adapter_classes[adapter_type]
                 adapter = adapter_class(adapter_config)
 
-                # Store by ID and type
                 self.adapters[adapter_id] = adapter
                 self.adapters_by_type[adapter_type].append(adapter)
 
@@ -166,12 +144,8 @@ class ResilientDataFarm:
                     stage="initialization",
                     block="adapters",
                     level="INFO",
-                    msg="Adapter loaded successfully",
-                    extra={
-                        "adapter_id": adapter_id,
-                        "adapter_type": adapter_type,
-                        "vendor": adapter_config.get("vendor", "unknown"),
-                    },
+                    msg=f"Loaded adapter: {adapter_id}",
+                    extra={"type": adapter_type, "vendor": adapter_config.get("vendor")},
                 )
 
             except Exception as e:
@@ -180,11 +154,7 @@ class ResilientDataFarm:
                     block="adapters",
                     level="ERROR",
                     msg=f"Failed to load adapter: {str(e)}",
-                    extra={
-                        "adapter_id": adapter_id,
-                        "adapter_type": adapter_type,
-                        "error": str(e),
-                    },
+                    extra={"adapter_id": adapter_id, "error": str(e)},
                 )
 
         log_event(
@@ -193,10 +163,10 @@ class ResilientDataFarm:
             level="INFO",
             msg="Adapter initialization complete",
             extra={
-                "total_adapters": len(self.adapters),
-                "price_adapters": len(self.adapters_by_type["price"]),
-                "news_adapters": len(self.adapters_by_type["news"]),
-                "fundamental_adapters": len(self.adapters_by_type["fundamental"]),
+                "total": len(self.adapters),
+                "price": len(self.adapters_by_type["price"]),
+                "news": len(self.adapters_by_type["news"]),
+                "fundamental": len(self.adapters_by_type["fundamental"]),
             },
         )
 
@@ -208,10 +178,10 @@ class ResilientDataFarm:
 
         Args:
             symbols: List of symbols to fetch
-            data_types: Optional list of data types to fetch (default: all)
+            data_types: Optional list of data types (default: all)
 
         Returns:
-            Dictionary containing fetched data organized by type and symbol
+            Dictionary with fetched data organized by type and symbol
         """
         fetch_start = datetime.utcnow()
 
@@ -222,15 +192,11 @@ class ResilientDataFarm:
             stage="data_fetch",
             block="orchestrator",
             level="INFO",
-            msg="Starting data fetch operation",
-            extra={
-                "symbols": symbols,
-                "data_types": data_types,
-                "symbol_count": len(symbols),
-            },
+            msg="Starting data fetch",
+            extra={"symbols": symbols, "data_types": data_types},
         )
 
-        # Initialize results structure
+        # Initialize results
         results = {
             "fetch_start": fetch_start.isoformat(),
             "symbols": symbols,
@@ -245,7 +211,7 @@ class ResilientDataFarm:
             "errors": [],
         }
 
-        # Fetch data for each type
+        # Fetch for each data type
         for data_type in data_types:
             adapters = self.adapters_by_type.get(data_type, [])
 
@@ -254,45 +220,35 @@ class ResilientDataFarm:
                     stage="data_fetch",
                     block="orchestrator",
                     level="WARNING",
-                    msg=f"No adapters available for data type: {data_type}",
+                    msg=f"No adapters for: {data_type}",
                 )
                 continue
 
             # Use first adapter for each type
             adapter = adapters[0]
 
-            log_event(
-                stage="data_fetch",
-                block="orchestrator",
-                level="INFO",
-                msg=f"Fetching {data_type} data using adapter: {adapter.adapter_id}",
-            )
-
-            # Fetch data for all symbols concurrently
-            fetch_tasks = [
+            # Fetch all symbols concurrently
+            tasks = [
                 self._fetch_single_symbol(adapter, symbol, data_type, results)
                 for symbol in symbols
             ]
+            await asyncio.gather(*tasks, return_exceptions=True)
 
-            await asyncio.gather(*fetch_tasks, return_exceptions=True)
-
-        # Calculate final metrics
+        # Calculate metrics
         fetch_end = datetime.utcnow()
-        fetch_duration = (fetch_end - fetch_start).total_seconds()
-
         results["fetch_end"] = fetch_end.isoformat()
-        results["fetch_duration_seconds"] = fetch_duration
+        results["fetch_duration_seconds"] = (fetch_end - fetch_start).total_seconds()
 
         log_event(
             stage="data_fetch",
             block="orchestrator",
             level="INFO",
-            msg="Data fetch operation complete",
+            msg="Data fetch complete",
             extra={
-                "duration_seconds": fetch_duration,
+                "duration": results["fetch_duration_seconds"],
                 "successful": results["fetch_summary"]["successful_fetches"],
                 "failed": results["fetch_summary"]["failed_fetches"],
-                "total_records": results["fetch_summary"]["total_records"],
+                "records": results["fetch_summary"]["total_records"],
             },
         )
 
@@ -301,39 +257,20 @@ class ResilientDataFarm:
     async def _fetch_single_symbol(
         self, adapter: BaseAdapter, symbol: str, data_type: str, results: Dict[str, Any]
     ):
-        """
-        Fetch data for a single symbol using specified adapter
-        FIXED: Properly handles news data structure
-        """
+        """Fetch data for a single symbol using specified adapter"""
         try:
-            log_event(
-                stage="data_fetch",
-                block="symbol_fetch",
-                level="DEBUG",
-                msg=f"Fetching {data_type} data for {symbol}",
-                extra={
-                    "adapter_id": adapter.adapter_id,
-                    "symbol": symbol,
-                    "data_type": data_type,
-                },
-            )
-
-            # Execute fetch
             fetch_result = await adapter.execute_ingest(symbol)
 
             if fetch_result.get("success"):
-                # Get data from result
                 data = fetch_result.get("data")
 
-                # CRITICAL FIX: Store data based on type
+                # Store data based on type
                 if data_type == "news":
-                    # For news, data is the full structure: {"symbol": "...", "data": [...], ...}
+                    # News: store full structure {symbol, data: [...], ...}
                     results["raw_data"][data_type][symbol] = data
-                    record_count = (
-                        len(data.get("data", [])) if isinstance(data, dict) else 0
-                    )
+                    record_count = len(data.get("data", [])) if isinstance(data, dict) else 0
                 elif data_type == "price":
-                    # For price, data is a list of records
+                    # Price: store list of records
                     if isinstance(data, list):
                         results["raw_data"][data_type][symbol] = data
                         record_count = len(data)
@@ -341,13 +278,12 @@ class ResilientDataFarm:
                         results["raw_data"][data_type][symbol] = [data] if data else []
                         record_count = 1 if data else 0
                 else:
-                    # Generic: store as-is
+                    # Generic: ensure list format
                     if not isinstance(data, list):
                         data = [data] if data else []
                     results["raw_data"][data_type][symbol] = data
                     record_count = len(data) if isinstance(data, list) else 1
 
-                # Update metrics
                 results["fetch_summary"]["successful_fetches"] += 1
                 results["fetch_summary"]["total_records"] += record_count
 
@@ -355,25 +291,18 @@ class ResilientDataFarm:
                     stage="data_fetch",
                     block="symbol_fetch",
                     level="INFO",
-                    msg=f"Successfully fetched {data_type} data for {symbol}",
-                    extra={
-                        "symbol": symbol,
-                        "data_type": data_type,
-                        "record_count": record_count,
-                    },
+                    msg=f"Fetched {data_type} for {symbol}",
+                    extra={"symbol": symbol, "records": record_count},
                 )
             else:
-                # Log failure
+                # Handle fetch failure
                 error_msg = fetch_result.get("error", "Unknown error")
                 results["fetch_summary"]["failed_fetches"] += 1
-                results["errors"].append(
-                    {
-                        "symbol": symbol,
-                        "data_type": data_type,
-                        "adapter_id": adapter.adapter_id,
-                        "error": error_msg,
-                    }
-                )
+                results["errors"].append({
+                    "symbol": symbol,
+                    "data_type": data_type,
+                    "error": error_msg,
+                })
 
                 # Initialize empty structure
                 if data_type == "news":
@@ -385,24 +314,17 @@ class ResilientDataFarm:
                     stage="data_fetch",
                     block="symbol_fetch",
                     level="ERROR",
-                    msg=f"Failed to fetch {data_type} data for {symbol}",
-                    extra={
-                        "symbol": symbol,
-                        "data_type": data_type,
-                        "error": error_msg,
-                    },
+                    msg=f"Failed to fetch {data_type} for {symbol}",
+                    extra={"error": error_msg},
                 )
 
         except Exception as e:
             results["fetch_summary"]["failed_fetches"] += 1
-            results["errors"].append(
-                {
-                    "symbol": symbol,
-                    "data_type": data_type,
-                    "adapter_id": adapter.adapter_id,
-                    "error": str(e),
-                }
-            )
+            results["errors"].append({
+                "symbol": symbol,
+                "data_type": data_type,
+                "error": str(e),
+            })
 
             if data_type == "news":
                 results["raw_data"][data_type][symbol] = {"data": []}
@@ -413,60 +335,28 @@ class ResilientDataFarm:
                 stage="data_fetch",
                 block="symbol_fetch",
                 level="ERROR",
-                msg=f"Exception while fetching {data_type} data for {symbol}",
-                extra={"symbol": symbol, "data_type": data_type, "error": str(e)},
+                msg=f"Exception fetching {data_type} for {symbol}: {str(e)}",
             )
 
-    async def _execute_complete_pipeline(
+    async def run_complete_pipeline(
         self, symbols: List[str], data_types: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """Execute complete end-to-end pipeline with all stages"""
+        """Execute complete end-to-end pipeline"""
         pipeline_start = datetime.utcnow()
 
         log_event(
             stage="pipeline",
             block="execution",
             level="INFO",
-            msg="Starting complete pipeline execution",
-            extra={
-                "symbols": symbols,
-                "data_types": data_types,
-                "total_stages": len(self.stages),
-            },
+            msg="Starting complete pipeline",
+            extra={"symbols": symbols, "stages": len(self.stages)},
         )
 
         try:
             # Step 1: Fetch data
-            log_event(
-                stage="pipeline",
-                block="execution",
-                level="INFO",
-                msg="Step 1: Fetching data from API",
-            )
-
             fetch_results = await self.fetch_data_for_symbols(symbols, data_types)
 
-            if fetch_results["fetch_summary"]["failed_fetches"] > 0:
-                log_event(
-                    stage="pipeline",
-                    block="execution",
-                    level="WARNING",
-                    msg="Some data fetches failed",
-                    extra={
-                        "failed_count": fetch_results["fetch_summary"][
-                            "failed_fetches"
-                        ],
-                        "errors": fetch_results["errors"],
-                    },
-                )
-
             if fetch_results["fetch_summary"]["total_records"] == 0:
-                log_event(
-                    stage="pipeline",
-                    block="execution",
-                    level="ERROR",
-                    msg="No data fetched - cannot proceed with pipeline",
-                )
                 raise ValueError("No data fetched from any source")
 
             # Initialize pipeline data
@@ -481,68 +371,8 @@ class ResilientDataFarm:
             }
 
             # Step 2: Execute stages
-            log_event(
-                stage="pipeline",
-                block="execution",
-                level="INFO",
-                msg="Step 2: Executing pipeline stages",
-            )
-
             for stage in self.stages:
-                log_event(
-                    stage="pipeline",
-                    block="execution",
-                    level="INFO",
-                    msg=f"Executing stage: {stage.stage_name}",
-                )
-
                 pipeline_data = await stage.execute(pipeline_data)
-
-                log_event(
-                    stage="pipeline",
-                    block="execution",
-                    level="INFO",
-                    msg=f"Completed stage: {stage.stage_name}",
-                )
-
-            # Step 3: Validate
-            log_event(
-                stage="pipeline",
-                block="validation",
-                level="INFO",
-                msg="Step 3: Running schema validation",
-            )
-
-            try:
-                validation_report = validate_pipeline_stages(pipeline_data)
-                pipeline_data["validation_report"] = validation_report
-
-                if validation_report["validation_passed"]:
-                    log_event(
-                        stage="pipeline",
-                        block="validation",
-                        level="INFO",
-                        msg="Schema validation PASSED",
-                    )
-                else:
-                    log_event(
-                        stage="pipeline",
-                        block="validation",
-                        level="ERROR",
-                        msg="Schema validation FAILED",
-                        extra={"errors": validation_report.get("errors", [])},
-                    )
-            except Exception as validation_error:
-                log_event(
-                    stage="pipeline",
-                    block="validation",
-                    level="WARNING",
-                    msg=f"Schema validation error: {str(validation_error)}",
-                )
-                pipeline_data["validation_report"] = {
-                    "validation_passed": False,
-                    "errors": [str(validation_error)],
-                }
 
             # Pipeline complete
             pipeline_end = datetime.utcnow()
@@ -552,8 +382,8 @@ class ResilientDataFarm:
                 stage="pipeline",
                 block="execution",
                 level="INFO",
-                msg="Complete pipeline execution finished",
-                extra={"total_duration_seconds": pipeline_duration},
+                msg="Pipeline complete",
+                extra={"duration": pipeline_duration},
             )
 
             pipeline_data["pipeline_end"] = pipeline_end.isoformat()
@@ -569,16 +399,10 @@ class ResilientDataFarm:
                 stage="pipeline",
                 block="execution",
                 level="ERROR",
-                msg=f"Pipeline execution failed: {str(e)}",
-                extra={"duration_seconds": pipeline_duration, "error": str(e)},
+                msg=f"Pipeline failed: {str(e)}",
+                extra={"duration": pipeline_duration},
             )
             raise
-
-    async def run_complete_pipeline(
-        self, symbols: List[str], data_types: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
-        """Public method to run complete end-to-end pipeline"""
-        return await self._execute_complete_pipeline(symbols, data_types)
 
     async def run_smoke_test(self, symbols: List[str]) -> Dict[str, Any]:
         """Run smoke test across all adapters"""
@@ -614,43 +438,37 @@ class ResilientDataFarm:
                             record_count = 1 if data else 0
 
                         results["passed"] += 1
-                        results["details"].append(
-                            {
-                                "adapter_id": adapter.adapter_id,
-                                "symbol": symbol,
-                                "status": "✅ PASSED",
-                                "record_count": record_count,
-                            }
-                        )
+                        results["details"].append({
+                            "adapter_id": adapter_id,
+                            "symbol": symbol,
+                            "status": "PASSED",
+                            "record_count": record_count,
+                        })
                     else:
                         results["failed"] += 1
                         results["success"] = False
-                        results["details"].append(
-                            {
-                                "adapter_id": adapter.adapter_id,
-                                "symbol": symbol,
-                                "status": "❌ FAILED",
-                                "error": result.get("error", "Unknown"),
-                            }
-                        )
+                        results["details"].append({
+                            "adapter_id": adapter_id,
+                            "symbol": symbol,
+                            "status": "FAILED",
+                            "error": result.get("error", "Unknown"),
+                        })
 
                 except Exception as e:
                     results["failed"] += 1
                     results["success"] = False
-                    results["details"].append(
-                        {
-                            "adapter_id": adapter.adapter_id,
-                            "symbol": symbol,
-                            "status": "⚠️ EXCEPTION",
-                            "error": str(e),
-                        }
-                    )
+                    results["details"].append({
+                        "adapter_id": adapter_id,
+                        "symbol": symbol,
+                        "status": "EXCEPTION",
+                        "error": str(e),
+                    })
 
         log_event(
             stage="smoke_test",
             block="data_farm",
             level="INFO",
-            msg="Smoke test completed",
+            msg="Smoke test complete",
             extra={
                 "total": results["total_tests"],
                 "passed": results["passed"],
@@ -661,7 +479,7 @@ class ResilientDataFarm:
         return results
 
     def get_adapters(self) -> Dict[str, BaseAdapter]:
-        """Get dictionary of all loaded adapters"""
+        """Get all loaded adapters"""
         return self.adapters
 
     def get_adapters_by_type(self, data_type: str) -> List[BaseAdapter]:
