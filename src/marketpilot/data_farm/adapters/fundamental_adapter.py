@@ -1,32 +1,28 @@
 """
-Resilient Fundamental Adapter using Financial Modeling Prep (FMP)
-Inherits schema validation from BaseAdapter
+Resilient Fundamental Adapter
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from marketpilot.data_farm.adapters.base_adapter import BaseAdapter
+from marketpilot.utils.logger import log_event
 
 
 class ResilientFundamentalAdapter(BaseAdapter):
-    """Fundamental data adapter using FMP"""
+    """Fundamental data adapter (currently using mock data)"""
 
     async def _execute_ingest_internal(
-        self, symbol: str, start: datetime = None, end: datetime = None
+        self,
+        symbol: str,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """
         Ingest fundamental data for a symbol
-
-        Args:
-            symbol: Stock symbol (e.g., 'AAPL')
-
-        Returns:
-            Dictionary with fundamental data
+        
+        TODO: Replace with actual FMP API call
         """
         try:
-            # TODO: Replace with actual FMP API call
-            # For now, return mock data
-
             end_date = datetime.utcnow()
             start_date = end_date - timedelta(days=365)
 
@@ -47,7 +43,11 @@ class ResilientFundamentalAdapter(BaseAdapter):
                     "capital_expenditure": -10959000000,
                     "free_cash_flow": 111192000000,
                 },
-                "ratios": {"pe_ratio": 28.5, "debt_to_equity": 5.96, "roe": 0.196},
+                "ratios": {
+                    "pe_ratio": 28.5,
+                    "debt_to_equity": 5.96,
+                    "roe": 0.196,
+                },
             }
 
             result_data = {
@@ -57,34 +57,36 @@ class ResilientFundamentalAdapter(BaseAdapter):
                 "enddate": end_date.isoformat(),
                 "data": mock_fundamentals,
             }
-            #  Validate against schema BEFORE returning
-            self.validate_schema(result_data)
 
-            self.log_success(symbol, record_count=1)
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="INFO",
+                msg="Successfully ingested fundamental data (MOCK)",
+                extra={"symbol": symbol},
+            )
 
             return {
                 "success": True,
                 "data": result_data,
                 "vendor": self.vendor,
+                "adapter_id": self.adapter_id,
                 "ingested_at": datetime.utcnow().isoformat(),
+                "record_count": 1,
             }
 
         except Exception as e:
-            self.log_error(symbol, str(e))
-            return {"success": False, "error": str(e), "vendor": self.vendor}
-
-
-# Example usage
-if __name__ == "__main__":
-    import asyncio
-
-    config = {
-        "vendor": "fmp",
-        "id": "fundamental_fmp_001",
-        "cadence": "daily",
-        "schema_type": "fundamental",
-    }
-
-    adapter = ResilientFundamentalAdapter(config)
-    result = asyncio.run(adapter.execute_ingest("AAPL"))
-    print(result)
+            error_msg = f"Unexpected error: {str(e)}"
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="ERROR",
+                msg=error_msg,
+                extra={"symbol": symbol},
+            )
+            return {
+                "success": False,
+                "error": error_msg,
+                "vendor": self.vendor,
+                "adapter_id": self.adapter_id,
+            }

@@ -1,14 +1,11 @@
 """
-Data Export Stage - Export processed data with Asset-First structure
-Organizes output by symbol (asset)
-Enhanced for news data with proper field handling
+Data Export Stage - Export to Asset-First directory structure
 """
 
 from typing import Dict, Any, List
 from pathlib import Path
 from datetime import datetime
 import json
-import yaml
 import re
 from collections import defaultdict
 from marketpilot.data_farm.stages.base_stage import BaseStage
@@ -16,29 +13,13 @@ from marketpilot.utils.logger import log_event
 
 
 class DataExportStage(BaseStage):
-    """Export validated data to Asset-First directory structure"""
+    """Export validated data to Asset-First structure"""
 
     def __init__(self):
         super().__init__("data_export")
 
-    def _sanitize_symbol_for_path(self, symbol: str) -> str:
-        """
-        Sanitize symbol name for use as directory/file name
-        Replaces characters that are invalid in Windows/Unix paths
-
-        Args:
-            symbol: Original symbol (e.g., "BINANCE:BTCUSDT.P")
-
-        Returns:
-            Sanitized symbol (e.g., "BINANCE_BTCUSDT_P")
-        """
-        sanitized = re.sub(r'[<>:"/\\|?*.]', "_", symbol)
-        sanitized = re.sub(r"_+", "_", sanitized)
-        sanitized = sanitized.strip("_")
-        return sanitized
-
     async def _process(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Export data to Asset-First directory structure"""
+        """Export data organized by symbol"""
         validated_data = data.get("validated_data", [])
 
         if not validated_data:
@@ -48,391 +29,230 @@ class DataExportStage(BaseStage):
                 level="WARNING",
                 msg="No validated data to export",
             )
-            data["export_stats"] = {
-                "exported_files": [],
-                "records_exported": 0,
-            }
+            data["export_stats"] = {"exported_files": [], "records_exported": 0}
             return data
 
-        # Get output directory from config
+        # Get config
         config = data.get("config", {})
-        output_config = config.get("output", {})
-
-        # Get base directory (with default fallback)
-        base_dir = Path(output_config.get("base_dir", "data_farm_exports"))
+        base_dir = Path(config.get("output", {}).get("base_dir", "data_farm_exports"))
         base_dir.mkdir(parents=True, exist_ok=True)
 
-        # Get export format preferences
-        export_formats = output_config.get("formats", ["parquet"])
-        compression = output_config.get("compression", "snappy")
-
-        # Group records by symbol and schema_type
-        grouped_data = self._group_by_symbol_and_type(validated_data)
+        # Group by symbol and type
+        grouped = self._group_by_symbol_and_type(validated_data)
 
         exported_files = []
         total_exported = 0
 
-        # Export each symbol's data
-        for symbol, types_data in grouped_data.items():
-            # Sanitize symbol for directory name
-            sanitized_symbol = self._sanitize_symbol_for_path(symbol)
-            symbol_dir = base_dir / sanitized_symbol
+        # Export each symbol
+        for symbol, types_data in grouped.items():
+            sanitized = self._sanitize_symbol(symbol)
+            symbol_dir = base_dir / sanitized
             symbol_dir.mkdir(parents=True, exist_ok=True)
 
-            # Store mapping of sanitized to original symbol in metadata
-            symbol_metadata_file = symbol_dir / "symbol_info.json"
-            with open(symbol_metadata_file, "w") as f:
-                json.dump(
-                    {
-                        "original_symbol": symbol,
-                        "sanitized_symbol": sanitized_symbol,
-                        "exported_at": datetime.utcnow().isoformat(),
-                    },
-                    f,
-                    indent=2,
-                )
+            # Save symbol mapping
+            self._save_symbol_info(symbol_dir, symbol, sanitized)
 
+            # Export each data type
             for schema_type, records in types_data.items():
                 try:
-                    # Determine file format based on schema type and config
-                    if "parquet" in export_formats:
-                        if schema_type == "price":
-                            export_file = symbol_dir / "price.parquet"
-                        elif schema_type == "news":
-                            export_file = symbol_dir / "news.parquet"
-                        elif schema_type == "fundamental":
-                            export_file = symbol_dir / "fundamentals.parquet"
-                        else:
-                            export_file = symbol_dir / f"{schema_type}.parquet"
-
-                        self._export_to_parquet(
-                            records, export_file, compression, schema_type
-                        )
-                    else:
-                        # Fallback to JSON
-                        if schema_type == "price":
-                            export_file = symbol_dir / "price.json"
-                        elif schema_type == "news":
-                            export_file = symbol_dir / "news.json"
-                        elif schema_type == "fundamental":
-                            export_file = symbol_dir / "fundamentals.json"
-                        else:
-                            export_file = symbol_dir / f"{schema_type}.json"
-
-                        self._export_to_json(records, export_file)
-
+                    export_file = symbol_dir / f"{schema_type}.parquet"
+                    self._export_to_parquet(records, export_file, schema_type)
+                    
                     exported_files.append(str(export_file))
                     total_exported += len(records)
-
+                    
                     log_event(
                         stage=self.stage_name,
                         block="data_export",
                         level="INFO",
-                        msg=f"Exported {schema_type} data for {symbol}",
+                        msg=f"Exported {schema_type} for {symbol}",
                         extra={
                             "symbol": symbol,
-                            "sanitized_symbol": sanitized_symbol,
                             "schema_type": schema_type,
                             "records": len(records),
                             "file": str(export_file),
-                            "format": (
-                                "parquet" if "parquet" in export_formats else "json"
-                            ),
                         },
                     )
-
                 except Exception as e:
                     log_event(
                         stage=self.stage_name,
                         block="data_export",
                         level="ERROR",
-                        msg=f"Failed to export {schema_type} for {symbol}: {str(e)}",
-                        extra={
-                            "symbol": symbol,
-                            "schema_type": schema_type,
-                            "error": str(e),
-                        },
+                        msg=f"Export failed: {str(e)}",
+                        extra={"symbol": symbol, "schema_type": schema_type},
                     )
 
-        # Create __meta__ directory for metadata
-        self._create_metadata(base_dir, grouped_data, data)
+        # Create metadata
+        self._create_metadata(base_dir, grouped, data)
 
         log_event(
             stage=self.stage_name,
             block="data_export",
             level="INFO",
-            msg="Data export completed",
+            msg=f"Export complete: {len(grouped)} symbols, {total_exported} records",
             extra={
-                "total_symbols": len(grouped_data),
-                "total_files": len(exported_files),
-                "total_records": total_exported,
-                "output_directory": str(base_dir),
+                "symbols": len(grouped),
+                "files": len(exported_files),
+                "records": total_exported,
             },
         )
 
         data["export_stats"] = {
             "exported_files": exported_files,
             "records_exported": total_exported,
-            "symbols_processed": list(grouped_data.keys()),
+            "symbols_processed": list(grouped.keys()),
             "output_directory": str(base_dir),
         }
-
         return data
+
+    def _sanitize_symbol(self, symbol: str) -> str:
+        """Sanitize symbol for filesystem (replace special chars with _)"""
+        sanitized = re.sub(r'[<>:"/\\|?*.]', "_", symbol)
+        sanitized = re.sub(r"_+", "_", sanitized)
+        return sanitized.strip("_")
 
     def _group_by_symbol_and_type(
         self, records: List[Dict[str, Any]]
     ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
-        """
-        Group records by symbol and schema type
-
-        Args:
-            records: List of validated records
-
-        Returns:
-            Nested dict: {symbol: {schema_type: [records]}}
-        """
+        """Group records by symbol and schema_type"""
         grouped = defaultdict(lambda: defaultdict(list))
-
+        
         for record in records:
             symbol = record.get("symbol")
             schema_type = record.get("schema_type", "unknown")
-
-            # Fallback: detect from adapter_id if schema_type not present
-            if schema_type == "unknown":
-                adapter_id = record.get("adapter_id", "")
-                schema_type = self._detect_schema_type(adapter_id)
-
-            if not symbol:
-                log_event(
-                    stage=self.stage_name,
-                    block="grouping",
-                    level="WARNING",
-                    msg="Record missing symbol, skipping",
-                    extra={"adapter_id": record.get("adapter_id")},
-                )
-                continue
-
-            grouped[symbol][schema_type].append(record)
-
+            
+            if symbol:
+                grouped[symbol][schema_type].append(record)
+        
         return dict(grouped)
 
-    def _detect_schema_type(self, adapter_id: str) -> str:
-        """
-        Detect schema type from adapter_id
-
-        Args:
-            adapter_id: Adapter identifier
-
-        Returns:
-            Schema type (price, news, fundamental)
-        """
-        adapter_lower = adapter_id.lower()
-
-        if "price" in adapter_lower:
-            return "price"
-        elif "news" in adapter_lower:
-            return "news"
-        elif "fundamental" in adapter_lower:
-            return "fundamental"
-        else:
-            return "unknown"
+    def _save_symbol_info(self, symbol_dir: Path, original: str, sanitized: str):
+        """Save symbol mapping info"""
+        info_file = symbol_dir / "symbol_info.json"
+        with open(info_file, "w") as f:
+            json.dump({
+                "original_symbol": original,
+                "sanitized_symbol": sanitized,
+                "exported_at": datetime.utcnow().isoformat(),
+            }, f, indent=2)
 
     def _export_to_parquet(
-        self,
-        records: List[Dict[str, Any]],
-        file_path: Path,
-        compression: str = "snappy",
-        schema_type: str = "unknown",
+        self, records: List[Dict], file_path: Path, schema_type: str
     ):
-        """
-        Export records to Parquet format with proper handling for nested structures
-
-        Args:
-            records: List of records to export
-            file_path: Output file path
-            compression: Compression algorithm (snappy, gzip, etc.)
-            schema_type: Type of data (price, news, fundamental)
-        """
+        """Export records to Parquet (with JSON fallback)"""
         try:
             import pandas as pd
 
-            # Flatten records for DataFrame
+            # Flatten records
             flattened = []
             for record in records:
-                flat_record = {
+                flat = {
                     "symbol": record.get("symbol"),
                     "adapter_id": record.get("adapter_id"),
                     "vendor": record.get("vendor"),
                     "ingested_at": record.get("ingested_at"),
                 }
-
-                # Flatten data payload
+                
+                # Add data payload
                 data_payload = record.get("data", {})
                 if isinstance(data_payload, dict):
-                    # Special handling for news data with nested structures
-                    if schema_type == "news":
-                        # Convert assets array to JSON string to avoid nested array issues
-                        if "assets" in data_payload and isinstance(
-                            data_payload["assets"], list
-                        ):
-                            flat_record["assets_json"] = json.dumps(
-                                data_payload["assets"]
-                            )
-                            flat_record["asset_count"] = data_payload.get(
-                                "asset_count", len(data_payload["assets"])
-                            )
-                            # Don't include raw assets array
-                            data_payload_copy = {
-                                k: v for k, v in data_payload.items() if k != "assets"
-                            }
-                            flat_record.update(data_payload_copy)
-                        else:
-                            flat_record.update(data_payload)
+                    # Handle nested structures (news assets)
+                    if schema_type == "news" and "assets" in data_payload:
+                        flat["assets_json"] = json.dumps(data_payload["assets"])
+                        flat["asset_count"] = len(data_payload["assets"])
+                        # Add other fields except assets
+                        flat.update({k: v for k, v in data_payload.items() if k != "assets"})
                     else:
-                        flat_record.update(data_payload)
+                        flat.update(data_payload)
+                
+                flattened.append(flat)
 
-                flattened.append(flat_record)
-
-            # Create DataFrame and export
+            # Create DataFrame
             df = pd.DataFrame(flattened)
 
-            # Convert timestamp columns to datetime
+            # Convert timestamps
             timestamp_cols = [
-                "timestamp",
-                "candle_time",
-                "published_at_utc",
-                "date_utc",
-                "startdate",
-                "enddate",
-                "ingested_at",
+                "timestamp", "candle_time", "published_at_utc",
+                "date_utc", "ingested_at"
             ]
             for col in timestamp_cols:
                 if col in df.columns:
                     df[col] = pd.to_datetime(df[col], errors="coerce")
 
-            # Export to Parquet with specified compression
-            df.to_parquet(
-                file_path, index=False, engine="pyarrow", compression=compression
-            )
+            # Export to Parquet
+            df.to_parquet(file_path, index=False, engine="pyarrow", compression="snappy")
 
         except ImportError:
+            # Fallback to JSON if pandas not available
             log_event(
                 stage=self.stage_name,
                 block="export",
                 level="WARNING",
-                msg="pandas/pyarrow not available, falling back to JSON",
+                msg="pandas not available, using JSON export",
             )
-            # Fallback to JSON if pandas not available
             json_path = file_path.with_suffix(".json")
             self._export_to_json(records, json_path)
         except Exception as e:
+            # Fallback on any error
             log_event(
                 stage=self.stage_name,
                 block="export",
-                level="ERROR",
-                msg=f"Parquet export failed: {str(e)}, falling back to JSON",
-                extra={"error": str(e)},
+                level="WARNING",
+                msg=f"Parquet export failed: {str(e)}, using JSON",
             )
             json_path = file_path.with_suffix(".json")
             self._export_to_json(records, json_path)
 
-    def _export_to_json(self, records: List[Dict[str, Any]], file_path: Path):
-        """
-        Export records to JSON format
-
-        Args:
-            records: List of records to export
-            file_path: Output file path
-        """
+    def _export_to_json(self, records: List[Dict], file_path: Path):
+        """Export to JSON format"""
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(records, f, indent=2, ensure_ascii=False, default=str)
 
-    def _create_metadata(
-        self, base_dir: Path, grouped_data: Dict, pipeline_data: Dict[str, Any]
-    ):
-        """
-        Create metadata files in __meta__ directory
-
-        Args:
-            base_dir: Base export directory
-            grouped_data: Grouped data by symbol
-            pipeline_data: Complete pipeline data
-        """
+    def _create_metadata(self, base_dir: Path, grouped: Dict, pipeline_data: Dict):
+        """Create metadata in __meta__ directory"""
         meta_dir = base_dir / "__meta__"
         meta_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. Schema versions
-        schema_versions = {
-            "created_at": datetime.utcnow().isoformat(),
-            "schemas": {
-                "price": "v1.0",
-                "news": "v1.0",
-                "fundamental": "v1.0",
-            },
-        }
-
-        with open(meta_dir / "schema_versions.yml", "w") as f:
-            yaml.dump(schema_versions, f, default_flow_style=False)
-
-        # 2. Symbol mapping (original to sanitized)
-        symbol_mapping = {}
-        for symbol in grouped_data.keys():
-            sanitized = self._sanitize_symbol_for_path(symbol)
-            symbol_mapping[symbol] = {"sanitized": sanitized, "directory": sanitized}
-
-        with open(meta_dir / "symbol_mapping.json", "w") as f:
-            json.dump(symbol_mapping, f, indent=2)
-
-        # 3. Manifest (JSONL format)
+        # 1. Manifest (JSONL)
         manifest_path = meta_dir / "manifest.jsonl"
         with open(manifest_path, "w") as f:
-            for symbol, types_data in grouped_data.items():
-                sanitized_symbol = self._sanitize_symbol_for_path(symbol)
+            for symbol, types_data in grouped.items():
+                sanitized = self._sanitize_symbol(symbol)
                 for schema_type, records in types_data.items():
-                    # Determine file extension based on export format
-                    config = pipeline_data.get("config", {})
-                    export_formats = config.get("output", {}).get(
-                        "formats", ["parquet"]
-                    )
-                    file_ext = "parquet" if "parquet" in export_formats else "json"
-
-                    manifest_entry = {
+                    entry = {
                         "symbol": symbol,
-                        "sanitized_symbol": sanitized_symbol,
+                        "sanitized_symbol": sanitized,
                         "schema_type": schema_type,
                         "record_count": len(records),
                         "exported_at": datetime.utcnow().isoformat(),
-                        "file": f"{sanitized_symbol}/{schema_type}.{file_ext}",
-                        "format": file_ext,
+                        "file": f"{sanitized}/{schema_type}.parquet",
                     }
-                    f.write(json.dumps(manifest_entry) + "\n")
+                    f.write(json.dumps(entry) + "\n")
 
-        # 4. Pipeline stats
-        stats = {
-            "exported_at": datetime.utcnow().isoformat(),
-            "pipeline_stats": {
-                "health_check": pipeline_data.get("health_check", {}),
-                "fetch_summary": pipeline_data.get("fetch_summary", {}),
-                "nan_stats": pipeline_data.get("nan_stats", {}),
-                "alignment_stats": pipeline_data.get("alignment_stats", {}),
-                "dedup_stats": pipeline_data.get("dedup_stats", {}),
-                "qa_stats": pipeline_data.get("qa_stats", {}),
-            },
-            "total_symbols": len(grouped_data),
-            "total_records": sum(
-                len(records)
-                for types_data in grouped_data.values()
-                for records in types_data.values()
-            ),
-        }
-
-        with open(meta_dir / "pipeline_stats.json", "w") as f:
-            json.dump(stats, f, indent=2, default=str)
+        # 2. Pipeline stats
+        stats_file = meta_dir / "pipeline_stats.json"
+        with open(stats_file, "w") as f:
+            json.dump({
+                "exported_at": datetime.utcnow().isoformat(),
+                "total_symbols": len(grouped),
+                "total_records": sum(
+                    len(records)
+                    for types_data in grouped.values()
+                    for records in types_data.values()
+                ),
+                "pipeline_stats": {
+                    "health_check": pipeline_data.get("health_check", {}),
+                    "nan_stats": pipeline_data.get("nan_stats", {}),
+                    "alignment_stats": pipeline_data.get("alignment_stats", {}),
+                    "dedup_stats": pipeline_data.get("dedup_stats", {}),
+                    "qa_stats": pipeline_data.get("qa_stats", {}),
+                },
+            }, f, indent=2, default=str)
 
         log_event(
             stage=self.stage_name,
             block="metadata",
             level="INFO",
-            msg="Metadata files created",
+            msg="Metadata created",
             extra={"meta_dir": str(meta_dir)},
         )

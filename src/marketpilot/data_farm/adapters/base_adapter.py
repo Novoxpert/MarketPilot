@@ -1,5 +1,5 @@
 """
-Base Adapter - Parent class for all data adapters with schema validation
+Base Adapter - Parent class for all data adapters
 """
 
 from abc import ABC, abstractmethod
@@ -7,11 +7,10 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 import uuid
 from marketpilot.utils.logger import log_event
-from marketpilot.utils.schema_validator import SchemaValidator
 
 
 class BaseAdapter(ABC):
-    """Base class for all data adapters with enhanced logging and validation"""
+    """Base class for all data adapters"""
 
     def __init__(self, config: Dict[str, Any]):
         """
@@ -29,9 +28,6 @@ class BaseAdapter(ABC):
         self.adapter_id = config.get("id", f"adapter_{uuid.uuid4().hex[:8]}")
         self.cadence = config.get("cadence", "unknown")
         self.schema_type = config.get("schema_type", "unknown")
-
-        # Schema validator instance
-        self.validator = SchemaValidator()
 
         log_event(
             stage="initialization",
@@ -53,7 +49,7 @@ class BaseAdapter(ABC):
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """
-        Execute ingestion with optional start/end timestamps
+        Execute ingestion with timing and error handling
 
         Args:
             symbol: Asset symbol to ingest
@@ -61,41 +57,44 @@ class BaseAdapter(ABC):
             end: Optional end datetime
 
         Returns:
-            Dictionary with ingestion result
+            Dictionary with ingestion result:
+            {
+                "success": bool,
+                "data": Any,  # Adapter-specific format
+                "vendor": str,
+                "adapter_id": str,
+                "ingested_at": str,
+                "record_count": int,
+                "error": str (if failed)
+            }
         """
         operation_id = uuid.uuid4().hex[:8]
-        start_time_log = datetime.utcnow()
+        start_time = datetime.utcnow()
 
         log_event(
             stage="ingestion",
-            block="adapter",
+            block=self.adapter_id,
             level="INFO",
             msg=f"Starting ingestion for {symbol}",
             extra={
                 "operation_id": operation_id,
-                "adapter_id": self.adapter_id,
                 "symbol": symbol,
-                "vendor": self.vendor,
-                "schema_type": self.schema_type,
                 "start": start.isoformat() if start else None,
                 "end": end.isoformat() if end else None,
             },
         )
 
         try:
-            # Pass start/end to _execute_ingest_internal
             result = await self._execute_ingest_internal(symbol, start=start, end=end)
-
-            duration_ms = (datetime.utcnow() - start_time_log).total_seconds() * 1000
+            duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
 
             log_event(
                 stage="ingestion",
-                block="adapter",
+                block=self.adapter_id,
                 level="INFO",
                 msg=f"Completed ingestion for {symbol}",
                 extra={
                     "operation_id": operation_id,
-                    "adapter_id": self.adapter_id,
                     "symbol": symbol,
                     "duration_ms": round(duration_ms, 2),
                     "success": result.get("success", False),
@@ -106,16 +105,15 @@ class BaseAdapter(ABC):
             return result
 
         except Exception as e:
-            duration_ms = (datetime.utcnow() - start_time_log).total_seconds() * 1000
+            duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
 
             log_event(
                 stage="ingestion",
-                block="adapter",
+                block=self.adapter_id,
                 level="ERROR",
                 msg=f"Ingestion failed for {symbol}: {str(e)}",
                 extra={
                     "operation_id": operation_id,
-                    "adapter_id": self.adapter_id,
                     "symbol": symbol,
                     "duration_ms": round(duration_ms, 2),
                     "error": str(e),
@@ -129,99 +127,6 @@ class BaseAdapter(ABC):
                 "adapter_id": self.adapter_id,
             }
 
-    def validate_schema(self, data: Dict[str, Any]) -> bool:
-        """
-        Validate data against adapter's schema type
-
-        Args:
-            data: Data to validate
-
-        Returns:
-            True if valid
-
-        Raises:
-            ValueError if validation fails
-        """
-        if self.schema_type == "unknown":
-            log_event(
-                stage="validation",
-                block="adapter",
-                level="WARNING",
-                msg="Schema type unknown, skipping validation",
-                extra={"adapter_id": self.adapter_id},
-            )
-            return True
-        #TODO:replace monk with real 
-        # Create a mock record for validation
-        mock_record = {
-            "symbol": data.get("symbol"),
-            "adapter_id": self.adapter_id,
-            "vendor": self.vendor,
-            "data": data,
-        }
-
-        missing_fields = self.validator.validate_record_structure(
-            mock_record, self.schema_type
-        )
-
-        if missing_fields:
-            error_msg = f"Schema validation failed. Missing fields: {missing_fields}"
-            log_event(
-                stage="validation",
-                block="adapter",
-                level="ERROR",
-                msg=error_msg,
-                extra={
-                    "adapter_id": self.adapter_id,
-                    "schema_type": self.schema_type,
-                    "missing_fields": missing_fields,
-                },
-            )
-            raise ValueError(error_msg)
-
-        log_event(
-            stage="validation",
-            block="adapter",
-            level="DEBUG",
-            msg="Schema validation passed",
-            extra={
-                "adapter_id": self.adapter_id,
-                "schema_type": self.schema_type,
-            },
-        )
-
-        return True
-
-    def log_success(self, symbol: str, record_count: int = 1):
-        """Log successful ingestion"""
-        log_event(
-            stage="ingestion",
-            block="adapter",
-            level="INFO",
-            msg=f"Successfully ingested data for {symbol}",
-            extra={
-                "adapter_id": self.adapter_id,
-                "symbol": symbol,
-                "record_count": record_count,
-                "vendor": self.vendor,
-            },
-        )
-
-    def log_error(self, symbol: str, error: str):
-        """Log ingestion error"""
-        log_event(
-            stage="ingestion",
-            block="adapter",
-            level="ERROR",
-            msg=f"Ingestion failed for {symbol}",
-            extra={
-                "adapter_id": self.adapter_id,
-                "symbol": symbol,
-                "error": error,
-                "vendor": self.vendor,
-            },
-        )
-
     @abstractmethod
     async def _execute_ingest_internal(
         self,
@@ -230,7 +135,7 @@ class BaseAdapter(ABC):
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """
-        Internal ingestion logic to be implemented by subclasses
+        Internal ingestion logic - implement in subclass
 
         Args:
             symbol: Asset symbol to ingest

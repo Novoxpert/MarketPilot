@@ -1,28 +1,32 @@
 """
-Data Collection Stage - Process already fetched data
-Fixed to properly handle news data structure
+Data Collection Stage - Organize fetched data into standard format
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from marketpilot.data_farm.stages.base_stage import BaseStage
 from marketpilot.utils.logger import log_event
 
 
 class DataCollectionStage(BaseStage):
-    """Process and organize already fetched data"""
+    """Convert fetched data into standardized record format"""
 
     def __init__(self):
         super().__init__("data_collection")
 
     async def _process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Process fetched data into standardized format
-
-        This stage now works with data already fetched by ResilientDataFarm.fetch_data_for_symbols()
-        instead of calling adapters again
+        Organize raw_data into standard record format
+        
+        Expected input: data["raw_data"] = {
+            "price": {symbol: [records]},
+            "news": {symbol: {data: [articles]}},
+            "fundamental": {symbol: records}
+        }
+        
+        Output: data["raw_data"] = [
+            {adapter_id, symbol, vendor, schema_type, data, ingested_at}
+        ]
         """
-
-        # Get raw_data that was already fetched
         raw_data_by_type = data.get("raw_data", {})
 
         if not raw_data_by_type:
@@ -30,235 +34,104 @@ class DataCollectionStage(BaseStage):
                 stage=self.stage_name,
                 block="data_collection",
                 level="WARNING",
-                msg="No raw_data found - was fetch_data_for_symbols() called?",
+                msg="No raw_data found",
             )
             data["raw_data"] = []
             return data
 
-        # Get config to find adapter mappings
+        # Get adapter mapping from config
         config = data.get("config", {})
-        adapters_config = config.get("adapters", [])
+        adapter_map = self._build_adapter_map(config.get("adapters", []))
 
-        # Build adapter mapping: type -> adapter info
-        adapter_mapping = {}
-        for adapter_cfg in adapters_config:
-            adapter_type = adapter_cfg.get("type")
-            if adapter_type:
-                adapter_mapping[adapter_type] = {
-                    "id": adapter_cfg.get("id", f"{adapter_type}_unknown"),
-                    "vendor": adapter_cfg.get("vendor", "unknown"),
-                }
+        collected = []
 
-        collected_records = []
-
-        # Process price data
-        if "price" in raw_data_by_type:
-            adapter_info = adapter_mapping.get(
-                "price", {"id": "price_unknown", "vendor": "unknown"}
-            )
-
-            for symbol, records in raw_data_by_type["price"].items():
-                # Handle list of records (new API format)
-                if isinstance(records, list):
-                    for record in records:
-                        collected_records.append(
-                            {
-                                "adapter_id": adapter_info["id"],
-                                "symbol": symbol,
-                                "vendor": adapter_info["vendor"],
-                                "schema_type": "price",
-                                "data": record,
-                                "ingested_at": record.get(
-                                    "timestamp", record.get("candle_time")
-                                ),
-                            }
-                        )
-                else:
-                    # Single record (old adapter format)
-                    collected_records.append(
-                        {
-                            "adapter_id": adapter_info["id"],
-                            "symbol": symbol,
-                            "vendor": adapter_info["vendor"],
-                            "schema_type": "price",
-                            "data": records,
-                            "ingested_at": records.get(
-                                "timestamp", records.get("candle_time")
-                            ),
-                        }
-                    )
-
-        # Process news data 
-        if "news" in raw_data_by_type:
-            adapter_info = adapter_mapping.get(
-                "news", {"id": "news_unknown", "vendor": "unknown"}
-            )
-
-            for symbol, news_response in raw_data_by_type["news"].items():
-                # {"symbol": "...", "startdate": "...", "enddate": "...", "timestamp": "...", "data": [...]}
-
-                log_event(
-                    stage=self.stage_name,
-                    block="data_collection",
-                    level="DEBUG",
-                    msg=f"Processing news for {symbol}",
-                    extra={
+        # Process each data type
+        for data_type, symbols_data in raw_data_by_type.items():
+            adapter_info = adapter_map.get(data_type, {
+                "id": f"{data_type}_adapter",
+                "vendor": "unknown"
+            })
+            
+            for symbol, symbol_data in symbols_data.items():
+                records = self._extract_records(symbol_data, data_type)
+                
+                for record in records:
+                    collected.append({
+                        "adapter_id": adapter_info["id"],
                         "symbol": symbol,
-                        "response_type": type(news_response).__name__,
-                        "has_data_field": "data" in news_response
-                        if isinstance(news_response, dict)
-                        else False,
-                    },
-                )
-
-                if isinstance(news_response, dict) and "data" in news_response:
-                    # Get the array of news articles from 'data' field
-                    news_articles = news_response.get("data", [])
-
-                    log_event(
-                        stage=self.stage_name,
-                        block="data_collection",
-                        level="DEBUG",
-                        msg=f"Found {len(news_articles) if isinstance(news_articles, list) else 0} articles for {symbol}",
-                    )
-
-                    # If news_articles is a list, process each article
-                    if isinstance(news_articles, list):
-                        for article in news_articles:
-                            if isinstance(article, dict):
-                                collected_records.append(
-                                    {
-                                        "adapter_id": adapter_info["id"],
-                                        "symbol": symbol,
-                                        "vendor": adapter_info["vendor"],
-                                        "schema_type": "news",
-                                        "data": article,
-                                        "ingested_at": article.get(
-                                            "published_at_utc",
-                                            article.get("releasedAt"),
-                                        ),
-                                    }
-                                )
-                    else:
-                        log_event(
-                            stage=self.stage_name,
-                            block="data_collection",
-                            level="WARNING",
-                            msg=f"Unexpected news data format for {symbol} - not a list",
-                        )
-                        if isinstance(news_articles, dict):
-                            collected_records.append(
-                                {
-                                    "adapter_id": adapter_info["id"],
-                                    "symbol": symbol,
-                                    "vendor": adapter_info["vendor"],
-                                    "schema_type": "news",
-                                    "data": news_articles,
-                                    "ingested_at": news_articles.get(
-                                        "published_at_utc",
-                                        news_articles.get("releasedAt"),
-                                    ),
-                                }
-                            )
-                elif isinstance(news_response, list):
-                    # Fallback: if it's already a list of articles (shouldn't happen)
-                    log_event(
-                        stage=self.stage_name,
-                        block="data_collection",
-                        level="WARNING",
-                        msg=f"News response is already a list for {symbol} - processing directly",
-                    )
-                    for article in news_response:
-                        if isinstance(article, dict):
-                            collected_records.append(
-                                {
-                                    "adapter_id": adapter_info["id"],
-                                    "symbol": symbol,
-                                    "vendor": adapter_info["vendor"],
-                                    "schema_type": "news",
-                                    "data": article,
-                                    "ingested_at": article.get(
-                                        "published_at_utc", article.get("releasedAt")
-                                    ),
-                                }
-                            )
-                else:
-                    log_event(
-                        stage=self.stage_name,
-                        block="data_collection",
-                        level="ERROR",
-                        msg=f"Unexpected news data structure for {symbol}",
-                        extra={
-                            "symbol": symbol,
-                            "type": type(news_response).__name__,
-                        },
-                    )
-
-        # Process fundamental data
-        if "fundamental" in raw_data_by_type:
-            adapter_info = adapter_mapping.get(
-                "fundamental", {"id": "fundamental_unknown", "vendor": "unknown"}
-            )
-
-            for symbol, records in raw_data_by_type["fundamental"].items():
-                if isinstance(records, list):
-                    for record in records:
-                        collected_records.append(
-                            {
-                                "adapter_id": adapter_info["id"],
-                                "symbol": symbol,
-                                "vendor": adapter_info["vendor"],
-                                "schema_type": "fundamental",
-                                "data": record,
-                                "ingested_at": record.get("date_utc"),
-                            }
-                        )
-                else:
-                    collected_records.append(
-                        {
-                            "adapter_id": adapter_info["id"],
-                            "symbol": symbol,
-                            "vendor": adapter_info["vendor"],
-                            "schema_type": "fundamental",
-                            "data": records,
-                            "ingested_at": records.get("date_utc"),
-                        }
-                    )
+                        "vendor": adapter_info["vendor"],
+                        "schema_type": data_type,
+                        "data": record,
+                        "ingested_at": self._extract_timestamp(record, data_type),
+                    })
 
         log_event(
             stage=self.stage_name,
             block="data_collection",
             level="INFO",
-            msg=f"Organized {len(collected_records)} records from fetched data",
+            msg=f"Organized {len(collected)} records",
             extra={
-                "total_records": len(collected_records),
-                "unique_symbols": len(set(r["symbol"] for r in collected_records)),
-                "schema_types": list(
-                    set(r.get("schema_type", "unknown") for r in collected_records)
-                ),
-                "by_type": {
-                    "price": len(
-                        [
-                            r
-                            for r in collected_records
-                            if r.get("schema_type") == "price"
-                        ]
-                    ),
-                    "news": len(
-                        [r for r in collected_records if r.get("schema_type") == "news"]
-                    ),
-                    "fundamental": len(
-                        [
-                            r
-                            for r in collected_records
-                            if r.get("schema_type") == "fundamental"
-                        ]
-                    ),
-                },
-                "adapter_mapping": adapter_mapping,
+                "total_records": len(collected),
+                "by_type": self._count_by_type(collected),
             },
         )
 
-        # Replace raw_data with organized records
-        data["raw_data"] = collected_records
+        data["raw_data"] = collected
         return data
+
+    def _build_adapter_map(self, adapters_config: List[Dict]) -> Dict[str, Dict]:
+        """Build mapping of data_type -> adapter info"""
+        return {
+            adapter["type"]: {
+                "id": adapter.get("id", f"{adapter['type']}_adapter"),
+                "vendor": adapter.get("vendor", "unknown"),
+            }
+            for adapter in adapters_config
+            if "type" in adapter
+        }
+
+    def _extract_records(self, symbol_data: Any, data_type: str) -> List[Dict]:
+        """
+        Extract individual records from symbol data
+        
+        Handles different formats:
+        - List of records: [record1, record2, ...]
+        - Dict with 'data' field: {data: [records]}
+        - Single record: {field: value}
+        """
+        # List of records (price format)
+        if isinstance(symbol_data, list):
+            return symbol_data
+        
+        # Dict with nested 'data' array (news format)
+        if isinstance(symbol_data, dict):
+            if "data" in symbol_data and isinstance(symbol_data["data"], list):
+                return symbol_data["data"]
+            # Single record dict
+            return [symbol_data]
+        
+        return []
+
+    def _extract_timestamp(self, record: Dict, data_type: str) -> str:
+        """Extract timestamp from record"""
+        timestamp_fields = {
+            "price": ["candle_time", "timestamp"],
+            "news": ["published_at_utc", "releasedAt", "timestamp"],
+            "fundamental": ["date_utc", "date", "timestamp"],
+        }
+        
+        fields = timestamp_fields.get(data_type, ["timestamp"])
+        
+        for field in fields:
+            if field in record and record[field]:
+                return str(record[field])
+        
+        return ""
+
+    def _count_by_type(self, records: List[Dict]) -> Dict[str, int]:
+        """Count records by schema type"""
+        counts = {}
+        for record in records:
+            schema_type = record.get("schema_type", "unknown")
+            counts[schema_type] = counts.get(schema_type, 0) + 1
+        return counts
