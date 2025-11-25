@@ -54,7 +54,7 @@ class AgentManager:
 
     def _import_tools(self) -> None:
       for tool_name, _cfg in self.tool_configs.items():
-        module_path = f"agentic.tools.{tool_name}"
+        module_path = f"marketpilot.agentic.tools.{tool_name}"
 
         try:
           module = importlib.import_module(module_path)
@@ -71,7 +71,7 @@ class AgentManager:
 
     def _import_agents(self) -> None:
       for agent_name, cfg in self.agent_configs.items():
-        role_module = f"agentic.agents.{cfg.name}"
+        role_module = f"marketpilot.agentic.agents.{cfg.name}"
 
         try:
           module = importlib.import_module(role_module)
@@ -90,7 +90,7 @@ class AgentManager:
           
     def _import_conditions(self) -> None:
       for condition_name, _cfg in self.condition_configs.items():
-        module_path = f"agentic.conditions.{condition_name}"
+        module_path = f"marketpilot.agentic.conditions.{condition_name}"
 
         try:
           module = importlib.import_module(module_path)
