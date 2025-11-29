@@ -1,5 +1,5 @@
 """
-Resilient News Adapter
+Resilient News Adapter 
 """
 
 from typing import Dict, Any, Optional, List
@@ -13,7 +13,7 @@ from marketpilot.data_farm.utils.api_retry_handler import create_retry_handler
 
 
 class ResilientNewsAdapter(BaseAdapter):
-    """News data adapter with retry mechanism"""
+    """News data adapter"""
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
@@ -65,36 +65,71 @@ class ResilientNewsAdapter(BaseAdapter):
     def _transform_response(
         self, articles: List[Dict], symbol: str, start: datetime, end: datetime
     ) -> Dict[str, Any]:
-        """Transform API response to standard format"""
-        transformed = []
+        """
+        Transform API response to news schema format
+        
+        API format:
+        [
+            {
+                "slug": "article-123",
+                "title": "Breaking News",
+                "subtitle": "Details here",
+                "releasedAt": "2025-01-15T10:00:00Z",
+                "source": "Reuters",
+                "sourceName": "Reuters",
+                "sourceUrl": "https://...",
+                "assets": [
+                    {"symbol": "BINANCE:BTCUSDT.P", "name": "Bitcoin"}
+                ]
+            },
+            ...
+        ]
+        """
+        transformed_items = []
+        most_recent_time = None
 
         for article in articles:
             assets = article.get("assets", [])
+            # Primary symbol is the first asset or the requested symbol
             primary_symbol = assets[0].get("symbol") if assets else symbol
 
-            transformed.append(
-                {
-                    "news_id": article.get("slug", ""),
-                    "symbol": symbol,
-                    "primary_symbol": primary_symbol,
-                    "published_at_utc": article.get("releasedAt", ""),
-                    "title": article.get("title", ""),
-                    "subtitle": article.get("subtitle", ""),
-                    "source": article.get("source", ""),
-                    "source_name": article.get("sourceName", ""),
-                    "source_url": article.get("sourceUrl", ""),
-                    "assets": assets,
-                    "asset_count": len(assets),
-                    "mapping_confidence": 1.0 if assets else 0.5,
-                }
-            )
+            # Normalize timestamp field
+            published_at = article.get("releasedAt") or article.get("published_at")
+            
+            # Track most recent article time for wrapper timestamp
+            if published_at:
+                article_time = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                if most_recent_time is None or article_time > most_recent_time:
+                    most_recent_time = article_time
+            
+            transformed_items.append({
+                "news_id": article.get("slug", ""),
+                "symbol": symbol,  # Use requested symbol
+                "primary_symbol": primary_symbol,
+                "published_at_utc": published_at,
+                "title": article.get("title", ""),
+                "subtitle": article.get("subtitle", ""),
+                "source": article.get("source", ""),
+                "source_name": article.get("sourceName", ""),
+                "source_url": article.get("sourceUrl", ""),
+                "assets": assets,
+                "asset_count": len(assets),
+                "mapping_confidence": 1.0 if assets else 0.5,
+            })
+
+        # Use most recent article time as timestamp (not ingestion time)
+        wrapper_timestamp = (
+            most_recent_time.isoformat() 
+            if most_recent_time 
+            else datetime.utcnow().isoformat()
+        )
 
         return {
             "symbol": symbol,
             "startdate": start.isoformat(),
             "enddate": end.isoformat(),
-            "timestamp": datetime.utcnow().isoformat(),
-            "data": transformed,
+            "timestamp": wrapper_timestamp,  # Most recent article, not ingestion time
+            "data": transformed_items,
         }
 
     async def _execute_ingest_internal(
@@ -103,23 +138,36 @@ class ResilientNewsAdapter(BaseAdapter):
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """Execute news data ingestion"""
+        """Execute news data ingestion with schema-compliant transformation"""
         try:
-            # Map symbol to slug
-            asset_slug = map_symbol_to_slug(symbol)
-
+            # Use config start/end if provided (for time range override)
+            if start is None:
+                start = self.config.get("start")
+            if end is None:
+                end = self.config.get("end")
+            
+            # Default to last 24 hours if still None
             if start is None or end is None:
                 end = datetime.utcnow()
                 start = end - timedelta(days=1)
 
-            url = self._build_api_url(asset_slug, start, end, self.default_limit)
+            # Map symbol to slug
+            asset_slug = map_symbol_to_slug(symbol)
 
+            url = self._build_api_url(asset_slug, start, end, self.default_limit)
+            print("-------news url")
+            print(url)
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
                 level="DEBUG",
                 msg="Fetching news data",
-                extra={"symbol": symbol, "asset_slug": asset_slug},
+                extra={
+                    "symbol": symbol, 
+                    "asset_slug": asset_slug,
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                },
             )
 
             # Fetch with retry
@@ -156,12 +204,19 @@ class ResilientNewsAdapter(BaseAdapter):
 
             if not news_data:
                 log_event(
-                    stage="ingestion",
+                    stage=self.stage_name,
                     block=self.adapter_id,
                     level="WARNING",
                     msg=f"No news data for {symbol}",
                 )
-                empty_result = self._transform_response([], symbol, start, end)
+                # Return empty but successful result with schema structure
+                empty_result = {
+                    "symbol": symbol,
+                    "startdate": start.isoformat(),
+                    "enddate": end.isoformat(),
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": [],
+                }
                 return {
                     "success": True,
                     "data": empty_result,
@@ -171,7 +226,7 @@ class ResilientNewsAdapter(BaseAdapter):
                     "metadata": {"pagination": pagination, "asset_slug": asset_slug},
                 }
 
-            # Transform
+            # Transform response to schema format
             transformed_data = self._transform_response(news_data, symbol, start, end)
             record_count = len(news_data)
 
@@ -179,13 +234,20 @@ class ResilientNewsAdapter(BaseAdapter):
                 stage="ingestion",
                 block=self.adapter_id,
                 level="INFO",
-                msg=f"Successfully ingested {record_count} news articles",
-                extra={"symbol": symbol, "record_count": record_count},
+                msg=f"Successfully ingested and transformed {record_count} news articles",
+                extra={
+                    "symbol": symbol, 
+                    "record_count": record_count,
+                    "time_range": {
+                        "start": start.isoformat(),
+                        "end": end.isoformat(),
+                    }
+                },
             )
 
             return {
                 "success": True,
-                "data": transformed_data,
+                "data": transformed_data,  # ✅ Schema-compliant wrapper
                 "vendor": self.vendor,
                 "adapter_id": self.adapter_id,
                 "ingested_at": datetime.utcnow().isoformat(),
