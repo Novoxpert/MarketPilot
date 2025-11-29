@@ -34,7 +34,7 @@ cp .env.example .env
 # Edit .env with your API keys
 
 # 4. Install pre-commit hooks
-poetry run pre-commit install
+# poetry run pre-commit install
 
 # 5. Verify setup
 poetry run pytest

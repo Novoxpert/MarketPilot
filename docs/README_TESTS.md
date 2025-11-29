@@ -241,3 +241,14 @@ Tests run automatically in CI pipeline (see `.github/workflows/ci.yml`):
    def sample_config():
        return {"vendor": "yfinance", ...}
    ```
+# in run_data_farm_complete.py - lines 207-208
+
+# Test 1: Last 1 hour
+START_DATE = END_DATE - timedelta(hours=1)
+
+# Test 2: Last 7 days
+START_DATE = END_DATE - timedelta(days=7)
+
+# Test 3: Specific range
+START_DATE = datetime(2025, 1, 1, 0, 0, 0)
+END_DATE = datetime(2025, 1, 7, 23, 59, 59)

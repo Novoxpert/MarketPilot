@@ -1,250 +1,290 @@
 """
-Main execution script for ResilientDataFarm with start/end support for price and news adapters
+Complete Data Farm Pipeline Runner with Time Range
+Executes full pipeline for multiple symbols with custom date range
 """
 
 import asyncio
 import sys
-from pathlib import Path
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
+from pathlib import Path
+from typing import List, Optional
 
 # Add project root to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root / "src"))
+project_root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(project_root))
 
 from marketpilot.data_farm.resilient_data_farm import ResilientDataFarm
+from marketpilot.utils.logger import log_event
+
+
+async def run_pipeline_with_timerange(
+    symbols: List[str],
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    config_path: str = "src/marketpilot/configs/data/data_farm_config.yml",
+    run_smoke_test: bool = True
+):
+    """
+    Run complete data farm pipeline for specific symbols and time range
+    
+    Args:
+        symbols: List of symbols to fetch (e.g., ["AAPL", "MSFT", "NVDA"])
+        start_date: Start datetime for data collection (None = use adapter defaults)
+        end_date: End datetime for data collection (None = use adapter defaults)
+        config_path: Path to config file
+        run_smoke_test: Whether to run smoke test first
+    """
+    print("\n" + "="*80)
+    print("🚀 RESILIENT DATA FARM - COMPLETE PIPELINE")
+    print("="*80)
+    
+    # Show configuration
+    print(f"\n📊 Configuration:")
+    print(f"   Symbols: {', '.join(symbols)}")
+    
+    if start_date and end_date:
+        duration_hours = (end_date - start_date).total_seconds() / 3600
+        print(f"   Time Range:")
+        print(f"      Start: {start_date.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        print(f"      End:   {end_date.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        print(f"      Duration: {duration_hours:.1f} hours")
+    else:
+        print(f"   Time Range: Using adapter defaults")
+    
+    print(f"   Config: {config_path}")
+    print(f"   Smoke Test: {'Enabled' if run_smoke_test else 'Disabled'}")
+    print("\n" + "-"*80 + "\n")
+
+    # ========================================
+    # Step 1: Initialize Data Farm
+    # ========================================
+    print("🔧 Step 1/4: Initializing Data Farm...")
+    try:
+        farm = ResilientDataFarm(config_path=config_path)
+        print(f"   ✅ Loaded {len(farm.adapters)} adapters")
+        print(f"   ✅ Configured {len(farm.stages)} pipeline stages")
+        
+        # Show adapter details
+        print(f"\n   Adapters:")
+        for adapter in farm.adapters:
+            print(f"      • {adapter.adapter_id} ({adapter.schema_type})")
+        print()
+        
+    except Exception as e:
+        print(f"   ❌ Initialization failed: {e}")
+        return {"success": False, "error": str(e)}
+
+    # ========================================
+    # Step 2: Smoke Test (Optional)
+    # ========================================
+    if run_smoke_test:
+        print("🏥 Step 2/4: Running Smoke Test...")
+        try:
+            smoke_results = await farm.run_smoke_test(symbols[:1])
+            
+            print(f"   Tests: {smoke_results['passed']}/{smoke_results['total_tests']} passed")
+            
+            if not smoke_results["success"]:
+                print("\n   ❌ SMOKE TEST FAILED")
+                print("\n   Failed Adapters:")
+                for detail in smoke_results["details"]:
+                    if detail["status"] != "PASSED":
+                        print(f"      • {detail['adapter_id']}: {detail.get('error', 'Unknown')}")
+                return {"success": False, "smoke_test": smoke_results}
+            
+            print("   ✅ All adapters operational\n")
+            
+        except Exception as e:
+            print(f"   ❌ Smoke test exception: {e}")
+            return {"success": False, "error": str(e)}
+    else:
+        print("🏥 Step 2/4: Smoke Test - Skipped\n")
+
+    # ========================================
+    # Step 3: Configure Time Range (if provided)
+    # ========================================
+    if start_date and end_date:
+        print("⏰ Step 3/4: Configuring Time Range...")
+        try:
+            # Inject time range into adapter configs
+            for adapter in farm.adapters:
+                adapter.config["start"] = start_date
+                adapter.config["end"] = end_date
+            
+            print(f"   ✅ Time range applied to all adapters\n")
+        
+        except Exception as e:
+            print(f"   ❌ Time range configuration failed: {e}")
+            return {"success": False, "error": str(e)}
+    else:
+        print("⏰ Step 3/4: Using Default Time Ranges\n")
+
+    # ========================================
+    # Step 4: Execute Pipeline
+    # ========================================
+    print("🚀 Step 4/4: Executing Complete Pipeline")
+    print("-"*80)
+    
+    try:
+        pipeline_start = datetime.utcnow()
+        
+        # Run pipeline with time range
+        results = await farm.run_complete_pipeline(
+            symbols=symbols,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        pipeline_end = datetime.utcnow()
+        duration = (pipeline_end - pipeline_start).total_seconds()
+        
+        print("\n" + "-"*80)
+        
+        # ========================================
+        # Results Summary
+        # ========================================
+        if results.get("pipeline_success"):
+            print("\n✅ PIPELINE COMPLETED SUCCESSFULLY")
+            print(f"\n📈 Results Summary:")
+            print(f"   Total Duration: {duration:.2f}s")
+            print(f"   Symbols Processed: {len(symbols)}")
+            
+            # Health Check
+            health = results.get("health_check", {})
+            if health:
+                print(f"\n   🏥 Health Check:")
+                print(f"      • Status: {health.get('overall_status', 'unknown').upper()}")
+                print(f"      • APIs Healthy: {health.get('apis_healthy', 0)}/{health.get('apis_checked', 0)}")
+            
+            # Data Collection
+            collection = results.get("collection_summary", {})
+            if collection:
+                print(f"\n   📥 Data Collection:")
+                print(f"      • Total Fetches: {collection.get('total_fetches', 0)}")
+                print(f"      • Successful: {collection.get('successful', 0)}")
+                print(f"      • Failed: {collection.get('failed', 0)}")
+                print(f"      • Total Records: {collection.get('total_records', 0)}")
+            
+            # NaN Processing
+            nan_stats = results.get("nan_stats", {})
+            if nan_stats:
+                print(f"\n   🧹 NaN Processing:")
+                print(f"      • NaNs Cleaned: {nan_stats.get('nan_count', 0)}")
+            
+            # Temporal Alignment
+            alignment = results.get("alignment_stats", {})
+            if alignment:
+                print(f"\n   ⏰ Temporal Alignment:")
+                print(f"      • Records Aligned: {alignment.get('aligned_count', 0)}")
+                print(f"      • Alignment Rate: {alignment.get('alignment_rate', 'N/A')}")
+            
+            # Deduplication
+            dedup = results.get("dedup_stats", {})
+            if dedup:
+                print(f"\n   🔍 Deduplication:")
+                print(f"      • Duplicates Removed: {dedup.get('duplicates_removed', 0)}")
+                print(f"      • Unique Records: {dedup.get('unique_records', 0)}")
+            
+            # Quality Assurance
+            qa = results.get("qa_stats", {})
+            if qa:
+                threshold_met = qa.get('threshold_met', False)
+                print(f"\n   ✔️  Quality Assurance:")
+                print(f"      • Passed: {qa.get('qa_passed', 0)}")
+                print(f"      • Failed: {qa.get('qa_failed', 0)}")
+                print(f"      • Pass Rate: {qa.get('pass_rate', 'N/A')}")
+                print(f"      • Threshold: {'✅ Met' if threshold_met else '⚠️  Not Met'}")
+            
+            # Export
+            export = results.get("export_stats", {})
+            if export:
+                print(f"\n   📦 Export:")
+                print(f"      • Records Exported: {export.get('records_exported', 0)}")
+                print(f"      • Files Created: {len(export.get('exported_files', []))}")
+                print(f"      • Output: {export.get('output_directory', 'N/A')}")
+            
+            # Show errors if any
+            errors = results.get("collection_errors", [])
+            if errors:
+                print(f"\n   ⚠️  Errors ({len(errors)}):")
+                for err in errors[:5]:
+                    print(f"      • {err.get('symbol')} ({err.get('data_type')}): {err.get('error')}")
+                if len(errors) > 5:
+                    print(f"      ... and {len(errors) - 5} more")
+            
+            print("\n" + "="*80)
+            print("\n📝 Logs available at:")
+            print("   • logs/pipeline/")
+            print("   • logs/stages/")
+            print("   • logs/adapters/")
+            print()
+            
+            return {"success": True, "results": results}
+        
+        else:
+            print("\n❌ PIPELINE FAILED")
+            print(f"\n⚠️  Error: {results.get('error', 'Unknown error')}")
+            print(f"   Duration: {duration:.2f}s")
+            print("\n" + "="*80)
+            return {"success": False, "results": results}
+    
+    except Exception as e:
+        print(f"\n❌ Pipeline execution failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
 
 
 async def main():
-    """Run complete data farm pipeline with optional start/end for adapters"""
-
-    # Load environment variables
-    load_dotenv()
-
-    print("=" * 80)
-    print("🚀 MarketPilot - Resilient Data Farm")
-    print("=" * 80)
-
-    try:
-        # Initialize Data Farm
-        print("\n📦 Initializing Data Farm...")
-        farm = ResilientDataFarm()
-
-        # Get target symbols from config
-        config = farm.get_config()
-        symbols = config.get("target_symbols", ["bitcoin", "ethereum"])
-
-        print("✅ Data Farm initialized")
-        print(f"   Symbols: {symbols}")
-        print(f"   Adapters: {len(farm.get_adapters())}")
-
-        # Display loaded adapters by type
-        print("\n📋 Loaded Adapters:")
-        for adapter_type in ["price", "news", "fundamental"]:
-            adapters_of_type = farm.get_adapters_by_type(adapter_type)
-            if adapters_of_type:
-                print(f"   {adapter_type.upper()}:")
-                for adapter in adapters_of_type:
-                    print(f"      • {adapter.adapter_id} ({adapter.vendor})")
-
-        # Step 1: Run smoke test
-        print("\n" + "=" * 80)
-        print("🧪 Step 1: Running Smoke Test")
-        print("=" * 80)
-
-        smoke_results = await farm.run_smoke_test(symbols)
-
-        print("\n📊 Smoke Test Results:")
-        print(f"   Total tests: {smoke_results['total_tests']}")
-        print(f"   ✅ Passed: {smoke_results['passed']}")
-        print(f"   ❌ Failed: {smoke_results['failed']}")
-
-        # Show details
-        for detail in smoke_results["details"]:
-            status_icon = detail["status"]
-            print(
-                f"   {status_icon} {detail['adapter_id']} - {detail['symbol']}", end=""
-            )
-            if "record_count" in detail:
-                print(f" ({detail['record_count']} records)")
-            elif "error" in detail:
-                print(f" - Error: {detail['error']}")
-            else:
-                print()
-
-        # Step 2: Run complete pipeline if smoke test passed
-        if smoke_results["failed"] == 0:
-            print("\n" + "=" * 80)
-            print("🏭 Step 2: Running Complete Pipeline")
-            print("=" * 80)
-
-            # Define time ranges for different data types
-            end_time = datetime.utcnow()
-
-            # Price: Last 10 minutes
-            price_start = end_time - timedelta(minutes=10)
-
-            # News: Last 24 hours
-            news_start = end_time - timedelta(days=1)
-
-            print("\n📅 Time Ranges:")
-            print(
-                f"   Price data: {price_start.strftime('%Y-%m-%d %H:%M')} to {end_time.strftime('%Y-%m-%d %H:%M')}"
-            )
-            print(
-                f"   News data: {news_start.strftime('%Y-%m-%d %H:%M')} to {end_time.strftime('%Y-%m-%d %H:%M')}"
-            )
-
-            # Determine which data types to fetch based on available adapters
-            data_types_to_fetch = []
-            if farm.get_adapters_by_type("price"):
-                data_types_to_fetch.append("price")
-            if farm.get_adapters_by_type("news"):
-                data_types_to_fetch.append("news")
-            if farm.get_adapters_by_type("fundamental"):
-                data_types_to_fetch.append("fundamental")
-
-            print(f"\n📊 Data types to process: {', '.join(data_types_to_fetch)}")
-
-            # Run complete pipeline
-            pipeline_results = await farm.run_complete_pipeline(
-                symbols=symbols, data_types=data_types_to_fetch
-            )
-
-            print("\n✅ Pipeline Completed Successfully!")
-            print(f"   Duration: {pipeline_results.get('pipeline_duration', 0):.2f}s")
-
-            # Fetch summary
-            fetch_summary = pipeline_results.get("fetch_summary", {})
-            print(f"   Records fetched: {fetch_summary.get('total_records', 0)}")
-            print(
-                f"   Successful fetches: {fetch_summary.get('successful_fetches', 0)}"
-            )
-            print(f"   Failed fetches: {fetch_summary.get('failed_fetches', 0)}")
-
-            # Show fetch errors if any
-            fetch_errors = pipeline_results.get("fetch_errors", [])
-            if fetch_errors:
-                print("\n⚠️  Fetch Errors:")
-                for error in fetch_errors:
-                    print(
-                        f"   • {error['symbol']} ({error['data_type']}): {error['error']}"
-                    )
-
-            # Show stage results
-            print("\n📊 Pipeline Stages:")
-
-            if "nan_stats" in pipeline_results:
-                print(
-                    f"   NaN Processing: {pipeline_results['nan_stats'].get('nan_count', 0)} NaNs fixed"
-                )
-
-            if "alignment_stats" in pipeline_results:
-                alignment = pipeline_results["alignment_stats"]
-                print(
-                    f"   Temporal Alignment: {alignment.get('aligned_count', 0)}/{alignment.get('total_records', 0)} records aligned ({alignment.get('alignment_rate', '0%')})"
-                )
-
-            if "dedup_stats" in pipeline_results:
-                dedup = pipeline_results["dedup_stats"]
-                print(
-                    f"   Deduplication: {dedup.get('duplicates_removed', 0)} duplicates removed, {dedup.get('unique_records', 0)} unique records kept ({dedup.get('deduplication_rate', '0%')})"
-                )
-
-            if "qa_stats" in pipeline_results:
-                qa = pipeline_results["qa_stats"]
-                threshold_icon = "✅" if qa.get("threshold_met", False) else "⚠️"
-                print(
-                    f"   Quality Assurance: {threshold_icon} {qa.get('qa_passed', 0)}/{qa.get('total_records', 0)} passed ({qa.get('pass_rate', '0%')})"
-                )
-
-                # Show QA issues if any
-                qa_issues = qa.get("issues", [])
-                if qa_issues:
-                    print(f"\n   ⚠️  QA Issues Found ({len(qa_issues)}):")
-                    for issue in qa_issues[:5]:  # Show first 5
-                        print(
-                            f"      • {issue['symbol']} ({issue['schema_type']}): {', '.join(issue['issues'])}"
-                        )
-                    if len(qa_issues) > 5:
-                        print(f"      ... and {len(qa_issues) - 5} more")
-
-            if "export_stats" in pipeline_results:
-                export = pipeline_results["export_stats"]
-                print("\n📁 Export Results:")
-                print(f"   Files exported: {len(export.get('exported_files', []))}")
-                print(f"   Records exported: {export.get('records_exported', 0)}")
-                print(f"   Output directory: {export.get('output_directory', 'N/A')}")
-                print(
-                    f"   Symbols processed: {', '.join(export.get('symbols_processed', []))}"
-                )
-
-                # Show exported files by symbol
-                exported_files = export.get("exported_files", [])
-                if exported_files:
-                    print("\n   Exported files:")
-                    for file_path in exported_files[:10]:  # Show first 10
-                        print(f"      • {file_path}")
-                    if len(exported_files) > 10:
-                        print(f"      ... and {len(exported_files) - 10} more")
-
-            # Validation results
-            validation = pipeline_results.get("validation_report", {})
-            print("\n🔍 Schema Validation:")
-            if validation.get("validation_passed"):
-                print("   ✅ PASSED")
-                stages_validated = validation.get("stages_validated", [])
-                if stages_validated:
-                    stage_strs = [str(stage) for stage in stages_validated]
-                    print(f"   Validated stages: {', '.join(stage_strs)}")
-            else:
-                print("   ❌ FAILED")
-                if validation.get("errors"):
-                    print("   Errors:")
-                    for error in validation["errors"]:
-                        print(f"      • {error}")
-
-            # Show warnings if any
-            warnings = validation.get("warnings", [])
-            if warnings:
-                print("   ⚠️  Warnings:")
-                for warning in warnings:
-                    print(f"      • {warning}")
-
-            # Final summary
-            print("\n" + "=" * 80)
-            print("📈 SUMMARY")
-            print("=" * 80)
-            print(f"   Total symbols processed: {len(symbols)}")
-            print(f"   Total data types: {len(data_types_to_fetch)}")
-            print(f"   Total records exported: {export.get('records_exported', 0)}")
-            print(
-                f"   Pipeline duration: {pipeline_results.get('pipeline_duration', 0):.2f}s"
-            )
-            print(
-                f"   Quality threshold met: {'✅ Yes' if qa.get('threshold_met', False) else '⚠️  No'}"
-            )
-
-        else:
-            print("\n⚠️  Skipping pipeline execution due to smoke test failures")
-            print("   Please fix the errors above and try again")
-
-    except Exception as e:
-        print(f"\n❌ Fatal Error: {str(e)}")
-        import traceback
-
-        traceback.print_exc()
+    """Main entry point"""
+    
+    # ========================================================================
+    # CONFIGURATION - Edit these values
+    # ========================================================================
+    
+    # Symbols to process
+    SYMBOLS = [
+        "BINANCE:BTCUSDT.P",
+        "BINANCE:ETHUSDT.P",
+        # Add more symbols as needed
+    ]
+    
+    # Time range (optional - leave as None to use adapter defaults)
+    END_DATE = datetime.utcnow()
+    START_DATE = END_DATE - timedelta(hours=24)  # Last 24 hours
+    
+    # Or use specific dates:
+    # START_DATE = datetime(2025, 1, 1, 0, 0, 0)
+    # END_DATE = datetime(2025, 1, 7, 23, 59, 59)
+    
+    # Or use None for adapter defaults:
+    # START_DATE = None
+    # END_DATE = None
+    
+    # Config path
+    CONFIG_PATH = "src/marketpilot/configs/data/data_farm_config.yml"
+    
+    # Run smoke test first?
+    RUN_SMOKE_TEST = True
+    
+    # ========================================================================
+    
+    # Execute pipeline
+    result = await run_pipeline_with_timerange(
+        symbols=SYMBOLS,
+        start_date=START_DATE,
+        end_date=END_DATE,
+        config_path=CONFIG_PATH,
+        run_smoke_test=RUN_SMOKE_TEST
+    )
+    
+    # Exit with appropriate code
+    if result.get("success"):
+        print("✅ Script completed successfully\n")
+        sys.exit(0)
+    else:
+        print("❌ Script failed\n")
         sys.exit(1)
-
-    print("\n" + "=" * 80)
-    print("✅ Data Farm execution complete")
-    print("=" * 80)
-    print("\n📝 Logs available at:")
-    print("   • logs/pipeline/current.jsonl")
-    print("   • logs/stages/*.jsonl")
-    print("   • logs/adapters/*.jsonl")
-    print("   • logs/errors/current.jsonl")
-    print()
 
 
 if __name__ == "__main__":

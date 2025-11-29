@@ -2,7 +2,7 @@
 Resilient Price Adapter
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 import os
 from urllib.parse import urlencode
@@ -12,7 +12,7 @@ from marketpilot.data_farm.utils.api_retry_handler import create_retry_handler
 
 
 class ResilientPriceAdapter(BaseAdapter):
-    """Price data adapter with retry mechanism"""
+    """Price data adapter"""
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
@@ -52,22 +52,81 @@ class ResilientPriceAdapter(BaseAdapter):
         }
         return f"{self.api_base_url}?{urlencode(params)}"
 
+    def _transform_response(
+        self, 
+        api_records: List[Dict], 
+        symbol: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Transform API response to price schema format
+        
+        API format:
+        [
+            {
+                "symbol": "BINANCE:BTCUSDT.P",
+                "candle_time": "2025-01-15T10:00:00Z",
+                "open": 95000.5,
+                "high": 95500.0,
+                "low": 94800.0,
+                "close": 95200.0,
+                "volume": 1234.56
+            },
+            ...
+        ]
+        """
+        transformed = []
+        
+        for record in api_records:
+            # Normalize timestamp field name to match schema
+            candle_time = record.get("candle_time") or record.get("timestamp")
+            
+            # Build flat record according to price_schema.yml
+            transformed.append({
+                "symbol": symbol,  # Use requested symbol consistently
+                "candle_time": candle_time,  # Required by schema
+                "open": float(record.get("open", 0)),
+                "high": float(record.get("high", 0)),
+                "low": float(record.get("low", 0)),
+                "close": float(record.get("close", 0)),
+                "volume": float(record.get("volume", 0)),
+                # Optional fields (if present in API response)
+                **{
+                    k: record[k] 
+                    for k in ["adjusted_close", "split_coefficient", "dividend_amount"]
+                    if k in record
+                }
+            })
+        
+        return transformed
+
     async def _execute_ingest_internal(
         self,
         symbol: str,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """Execute price data ingestion"""
+        """Execute price data ingestion with schema-compliant transformation"""
         try:
+            # Use config start/end if provided (for time range override)
+            if start is None:
+                start = self.config.get("start")
+            if end is None:
+                end = self.config.get("end")
+            
             url = self._build_api_url(symbol, start, end)
-
+            print("-------news url")
+            print(url)
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
                 level="DEBUG",
                 msg="Fetching price data",
-                extra={"symbol": symbol, "url": url},
+                extra={
+                    "symbol": symbol, 
+                    "url": url,
+                    "start": start.isoformat() if start else None,
+                    "end": end.isoformat() if end else None,
+                },
             )
 
             # Fetch with retry
@@ -99,7 +158,7 @@ class ResilientPriceAdapter(BaseAdapter):
                     "adapter_id": self.adapter_id,
                 }
 
-            # Extract data
+            # Extract raw data
             data_records = api_response.get("data", [])
             metadata = api_response.get("metadata", {})
 
@@ -110,28 +169,32 @@ class ResilientPriceAdapter(BaseAdapter):
                     level="WARNING",
                     msg=f"No data returned for {symbol}",
                 )
+                # Return empty but successful result
                 return {
                     "success": True,
-                    "data": [],
+                    "data": [],  # Empty list of records
                     "vendor": self.vendor,
                     "adapter_id": self.adapter_id,
                     "record_count": 0,
                     "metadata": metadata,
                 }
 
-            record_count = len(data_records)
+            # ✅ TRANSFORM: Convert API format to schema-compliant flat records
+            transformed_data = self._transform_response(data_records, symbol)
+            
+            record_count = len(transformed_data)
 
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
                 level="INFO",
-                msg=f"Successfully ingested {record_count} records",
+                msg=f"Successfully ingested and transformed {record_count} records",
                 extra={"symbol": symbol, "record_count": record_count},
             )
 
             return {
                 "success": True,
-                "data": data_records,
+                "data": transformed_data,  # ✅ Now returns flat list
                 "vendor": self.vendor,
                 "adapter_id": self.adapter_id,
                 "ingested_at": datetime.utcnow().isoformat(),
