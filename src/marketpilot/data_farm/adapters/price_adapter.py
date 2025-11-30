@@ -77,8 +77,7 @@ class ResilientPriceAdapter(BaseAdapter):
         transformed = []
         
         for record in api_records:
-            # Normalize timestamp field name to match schema
-            candle_time = record.get("candle_time") or record.get("timestamp")
+            candle_time = record.get("candle_time")
             
             # Build flat record according to price_schema.yml
             transformed.append({
@@ -114,7 +113,7 @@ class ResilientPriceAdapter(BaseAdapter):
                 end = self.config.get("end")
             
             url = self._build_api_url(symbol, start, end)
-            print("-------news url")
+            print("-------price url")
             print(url)
             log_event(
                 stage="ingestion",
@@ -157,7 +156,8 @@ class ResilientPriceAdapter(BaseAdapter):
                     "vendor": self.vendor,
                     "adapter_id": self.adapter_id,
                 }
-
+            print(">>>>>>>>api_response")
+            print(api_response)
             # Extract raw data
             data_records = api_response.get("data", [])
             metadata = api_response.get("metadata", {})

@@ -79,7 +79,7 @@ class DataExportStage(BaseStage):
                         block="data_export",
                         level="ERROR",
                         msg=f"Export failed: {str(e)}",
-                        extra={"symbol": symbol, "schema_type": schema_type},
+                        extra={"symbol": symbol, "schema_type": schema_type, "error": str(e)},
                     )
 
         # Create metadata
@@ -139,7 +139,7 @@ class DataExportStage(BaseStage):
     def _export_to_parquet(
         self, records: List[Dict], file_path: Path, schema_type: str
     ):
-        """Export records to Parquet (with JSON fallback)"""
+        """Export records to Parquet with proper timestamp handling"""
         try:
             import pandas as pd
 
@@ -170,17 +170,48 @@ class DataExportStage(BaseStage):
             # Create DataFrame
             df = pd.DataFrame(flattened)
 
-            # Convert timestamps
+            # Convert Unix timestamps (ms) to pandas datetime
             timestamp_cols = [
                 "timestamp", "candle_time", "published_at_utc",
                 "date_utc", "ingested_at"
             ]
+            
             for col in timestamp_cols:
-                if col in df.columns:
-                    df[col] = pd.to_datetime(df[col], errors="coerce")
+                if col not in df.columns:
+                    continue
+                
+                # Check column dtype
+                if df[col].dtype in ['int64', 'float64', 'Int64']:
+                    # It's a Unix timestamp (milliseconds)
+                    # Convert to datetime using pandas
+                    df[col] = pd.to_datetime(df[col], unit='ms', utc=True, errors='coerce')
+                    
+                    log_event(
+                        stage=self.stage_name,
+                        block="export_timestamps",
+                        level="DEBUG",
+                        msg=f"Converted {col} from Unix ms to datetime",
+                        extra={"column": col, "records": len(df)},
+                    )
+                else:
+                    # Try ISO format parsing
+                    df[col] = pd.to_datetime(df[col], errors='coerce')
 
             # Export to Parquet
-            df.to_parquet(file_path, index=False, engine="pyarrow", compression="snappy")
+            df.to_parquet(
+                file_path,
+                index=False,
+                engine="pyarrow",
+                compression="snappy"
+            )
+            
+            log_event(
+                stage=self.stage_name,
+                block="export_parquet",
+                level="DEBUG",
+                msg=f"Exported {len(df)} records to Parquet",
+                extra={"file": str(file_path), "records": len(df)},
+            )
 
         except ImportError:
             # Fallback to JSON if pandas not available
@@ -192,13 +223,15 @@ class DataExportStage(BaseStage):
             )
             json_path = file_path.with_suffix(".json")
             self._export_to_json(records, json_path)
+            
         except Exception as e:
             # Fallback on any error
             log_event(
                 stage=self.stage_name,
                 block="export",
-                level="WARNING",
-                msg=f"Parquet export failed: {str(e)}, using JSON",
+                level="ERROR",
+                msg=f"Parquet export failed: {str(e)}, using JSON fallback",
+                extra={"error": str(e), "file": str(file_path)},
             )
             json_path = file_path.with_suffix(".json")
             self._export_to_json(records, json_path)

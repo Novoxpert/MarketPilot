@@ -405,7 +405,7 @@ if __name__ == "__main__":
         test_symbols = ["BINANCE:BTCUSDT.P", "BINANCE:ETHUSDT.P"]
 
         # Optional: Run smoke test first
-        print(">>> Running smoke test...")
+        print(">>> Running smoke test...",test_symbols[:1])
         smoke_results = await farm.run_smoke_test(test_symbols[:1])
         print(f"Smoke test: {smoke_results['passed']}/{smoke_results['total_tests']} passed\n")
 

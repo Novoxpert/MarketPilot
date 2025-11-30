@@ -37,12 +37,15 @@ poetry.lock
 
 # IDEs
 .vscode/
+.vscode
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
 
+
+.history
 # Testing
 .pytest_cache/
 .coverage
@@ -79,11 +82,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-.vscode
-
-.history
 
 # output
 data_test/
-data_farm_exports/
-.env
+/data/

@@ -3,7 +3,7 @@ API Retry Handler Utility
 Shared retry logic and error handling for all adapters
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 import aiohttp
 import asyncio
 from marketpilot.utils.logger import log_event
@@ -49,7 +49,7 @@ class APIRetryHandler:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         data: Optional[Dict[str, Any]] = None,
-    ) -> tuple[int, Optional[Dict[str, Any]]]:
+    ) -> Tuple[int, Optional[Dict[str, Any]]]:
         """
         Fetch data from API with retry logic and exponential backoff
 
@@ -129,7 +129,7 @@ class APIRetryHandler:
                                 return (status, None)
 
                         # Handle different error codes
-                        error_handling = self._handle_http_error(
+                        error_handling = await self._handle_http_error(
                             status, response, symbol
                         )
 
