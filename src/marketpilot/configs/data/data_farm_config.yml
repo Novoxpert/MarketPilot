@@ -3,7 +3,7 @@ logging:
   level: INFO
 
 output:
-  base_dir: data_farm_exports  # Dynamic from config
+  base_dir: data  # Dynamic from config
   formats: ["parquet"]          # Can be ["parquet", "json"]
   compression: snappy           # snappy, gzip, etc.
 
@@ -23,19 +23,19 @@ adapters:
     # end: optional datetime       # Can be provided dynamically at runtime
 
   # News Data Adapter
-  - id: "news_internal_001"
-    type: "news"
-    vendor: "internal_news_api"
-    cadence: "5min"
-    schema_type: "news"
-    limit: 100
+  # - id: "news_internal_001"
+  #   type: "news"
+  #   vendor: "internal_news_api"
+  #   cadence: "5min"
+  #   schema_type: "news"
+  #   limit: 100
 
   # Fundamental Data Adapter (commented out - no real API yet)
-  - id: fundamental_fmp_001
-    type: fundamental
-    vendor: fmp
-    cadence: daily
-    schema_type: fundamental
+  # - id: fundamental_fmp_001
+  #   type: fundamental
+  #   vendor: fmp
+  #   cadence: daily
+  #   schema_type: fundamental
 
 # Quality Assurance Configuration
 quality:

@@ -1,20 +1,17 @@
 """
-Health Check Stage - Simple API Health Validation
+Health Check Stage
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import os
 import aiohttp
 import asyncio
-from datetime import datetime
 from marketpilot.data_farm.stages.base_stage import BaseStage
 from marketpilot.utils.logger import log_event
 
 
 class HealthCheckStage(BaseStage):
     """
-    Simple health check: Test API /health endpoints
-    
     Purpose: Verify APIs are available BEFORE starting data collection
     Runs: ONCE at pipeline start
     """
@@ -24,15 +21,8 @@ class HealthCheckStage(BaseStage):
 
     async def _process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Simple 3-step health check:
-        1. Test API /health endpoints
-        2. Check adapters loaded
-        3. Validate config
+        Health check based on active adapters in config
         """
-        # Get health endpoint URLs from environment
-        price_health_url = os.getenv("PRICE_API_HEALTH_URL")
-        news_health_url = os.getenv("NEWS_API_HEALTH_URL")
-        
         # Results container
         health_results = {
             "apis_checked": 0,
@@ -42,45 +32,7 @@ class HealthCheckStage(BaseStage):
         }
         
         # ============================================
-        # Step 1: Check API Health Endpoints
-        # ============================================
-        apis_to_check = []
-        if price_health_url:
-            apis_to_check.append(("price", price_health_url))
-        if news_health_url:
-            apis_to_check.append(("news", news_health_url))
-        
-        if not apis_to_check:
-            log_event(
-                stage=self.stage_name,
-                block="health_check",
-                level="ERROR",
-                msg="No health endpoints configured",
-            )
-            health_results["overall_status"] = "critical"
-            data["health_check"] = health_results
-            return data
-        
-        # Check each API
-        for api_type, health_url in apis_to_check:
-            health_results["apis_checked"] += 1
-            
-            is_healthy = await self._check_api(api_type, health_url)
-            print("---------is_healthy")
-            if is_healthy:
-                health_results["apis_healthy"] += 1
-                health_results["api_details"].append({
-                    "type": api_type,
-                    "status": "healthy"
-                })
-            else:
-                health_results["api_details"].append({
-                    "type": api_type,
-                    "status": "unhealthy"
-                })
-        
-        # ============================================
-        # Step 2: Check Adapters Loaded
+        # Step 1: Build API list from ACTIVE adapters
         # ============================================
         adapters = data.get("adapters", [])
         if not adapters:
@@ -94,6 +46,65 @@ class HealthCheckStage(BaseStage):
             data["health_check"] = health_results
             return data
         
+        # Extract unique adapter types from active adapters
+        active_types = set()
+        for adapter in adapters:
+            adapter_type = adapter.config.get("type")
+            if adapter_type:
+                active_types.add(adapter_type)
+        
+        # Map adapter types to health URLs
+        type_to_health_url = {
+            "price": os.getenv("PRICE_API_HEALTH_URL"),
+            "news": os.getenv("NEWS_API_HEALTH_URL"),
+            "fundamental": os.getenv("FUNDAMENTAL_API_HEALTH_URL"),
+        }
+        
+        # Build list of APIs to check (only active adapters)
+        apis_to_check = []
+        for adapter_type in active_types:
+            health_url = type_to_health_url.get(adapter_type)
+            if health_url:
+                apis_to_check.append((adapter_type, health_url))
+            else:
+                log_event(
+                    stage=self.stage_name,
+                    block="health_check",
+                    level="WARNING",
+                    msg=f"No health URL configured for {adapter_type}",
+                )
+        
+        if not apis_to_check:
+            log_event(
+                stage=self.stage_name,
+                block="health_check",
+                level="ERROR",
+                msg="No health endpoints configured for active adapters",
+            )
+            health_results["overall_status"] = "critical"
+            data["health_check"] = health_results
+            return data
+        
+        # ============================================
+        # Step 2: Check Each API Health
+        # ============================================
+        for api_type, health_url in apis_to_check:
+            health_results["apis_checked"] += 1
+            
+            is_healthy = await self._check_api(api_type, health_url)
+            
+            if is_healthy:
+                health_results["apis_healthy"] += 1
+                health_results["api_details"].append({
+                    "type": api_type,
+                    "status": "healthy"
+                })
+            else:
+                health_results["api_details"].append({
+                    "type": api_type,
+                    "status": "unhealthy"
+                })
+        
         # ============================================
         # Step 3: Validate Config
         # ============================================
@@ -106,7 +117,7 @@ class HealthCheckStage(BaseStage):
             return data
         
         # ============================================
-        # Determine Overall Status
+        # Step 4: Determine Overall Status
         # ============================================
         if health_results["apis_healthy"] == 0:
             health_results["overall_status"] = "critical"
@@ -124,7 +135,7 @@ class HealthCheckStage(BaseStage):
             extra={
                 "healthy_apis": health_results["apis_healthy"],
                 "total_apis": health_results["apis_checked"],
-                "status": health_results["overall_status"],
+                "checked_types": [t for t, _ in apis_to_check],
             },
         )
         
@@ -132,11 +143,7 @@ class HealthCheckStage(BaseStage):
         return data
 
     async def _check_api(self, api_type: str, health_url: str) -> bool:
-        """
-        Simple API health check
-        
-        Returns: True if API is healthy (success=true)
-        """
+        """Check if API health endpoint returns success"""
         try:
             timeout = aiohttp.ClientTimeout(total=10)
             
@@ -152,10 +159,7 @@ class HealthCheckStage(BaseStage):
                         )
                         return False
                     
-                    # Parse JSON response
                     health_data = await response.json()
-                    
-                    # Check success field
                     success = health_data.get("success", False)
                     
                     if success:

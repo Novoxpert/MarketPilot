@@ -3,8 +3,8 @@ Deduplication Stage - Remove duplicate records
 """
 
 from typing import Dict, Any, Set
-from marketpilot.data_farm.stages.base_stage import BaseStage
 from marketpilot.utils.logger import log_event
+from marketpilot.data_farm.stages.base_stage import BaseStage
 
 
 class DeduplicationStage(BaseStage):
@@ -20,6 +20,7 @@ class DeduplicationStage(BaseStage):
         unique_records = []
         seen_keys: Set[str] = set()
         duplicates_removed = 0
+        duplicate_details = []
 
         for record in aligned_data:
             # Generate unique key based on data type
@@ -27,6 +28,13 @@ class DeduplicationStage(BaseStage):
             
             if unique_key in seen_keys:
                 duplicates_removed += 1
+                # Track first few duplicates for debugging
+                if len(duplicate_details) < 5:
+                    duplicate_details.append({
+                        "symbol": record.get("symbol"),
+                        "schema_type": record.get("schema_type"),
+                        "key": unique_key,
+                    })
             else:
                 seen_keys.add(unique_key)
                 unique_records.append(record)
@@ -40,6 +48,8 @@ class DeduplicationStage(BaseStage):
                 "duplicates_removed": duplicates_removed,
                 "unique_records": len(unique_records),
                 "original_records": len(aligned_data),
+                "duplicate_rate": f"{(duplicates_removed/len(aligned_data)*100):.1f}%" if aligned_data else "0%",
+                "sample_duplicates": duplicate_details,
             },
         )
 
@@ -48,15 +58,18 @@ class DeduplicationStage(BaseStage):
             "duplicates_removed": duplicates_removed,
             "unique_records": len(unique_records),
             "original_records": len(aligned_data),
+            "duplicate_rate": f"{(duplicates_removed/len(aligned_data)*100):.1f}%" if aligned_data else "0%",
         }
         return data
 
     def _generate_unique_key(self, record: Dict[str, Any]) -> str:
         """
-        Generate unique key for deduplication
+        Generate unique key for deduplication (IMPROVED)
+        
+        Use Unix timestamp (ms) for more reliable deduplication
         
         Rules:
-        - price: symbol + timestamp
+        - price: symbol + timestamp (Unix ms)
         - news: symbol + news_id
         - fundamental: symbol + metric + timestamp
         - default: adapter_id + symbol + timestamp
@@ -65,17 +78,21 @@ class DeduplicationStage(BaseStage):
         schema_type = record.get("schema_type", "unknown")
         record_data = record.get("data", {})
         
-        # Get timestamp
-        timestamp = (
-            record_data.get("timestamp")
-            or record_data.get("candle_time")
-            or record_data.get("published_at_utc")
-            or record_data.get("date_utc")
-            or "no_timestamp"
-        )
+        # Get Unix timestamp (ms) from normalized 'timestamp' field
+        timestamp = record_data.get("timestamp", "no_timestamp")
+        
+        # Fallback to other timestamp fields if needed
+        if timestamp == "no_timestamp":
+            timestamp = (
+                record_data.get("candle_time")
+                or record_data.get("published_at_utc")
+                or record_data.get("date_utc")
+                or "no_timestamp"
+            )
         
         # Type-specific keys
         if schema_type == "price":
+            # Price uses symbol + Unix timestamp
             return f"price:{symbol}:{timestamp}"
         
         elif schema_type == "news":
