@@ -33,7 +33,8 @@ class NaNProcessingStage(BaseStage):
 
         for record in raw_data:
             record_data = record.get("data", {})
-            
+            # record :ex: {'adapter_id': 'price_internal_001', 'symbol': 'BINANCE:ETHUSDT.P', 'vendor': 'internal_price_api', 'schema_type': 'price', 'data': {'symbol': 'BINANCE:ETHUSDT.P', 'candle_time': '2025-12-01T10:43:00', 'open': 2840.35, 'high': 2841.0, 'low': 2840.17, 'close': 2840.35, 'volume': 670.698}, 'ingested_at': '2025-12-01T10:46:39.705466'}
+            # record_data =  {'symbol': 'BINANCE:ETHUSDT.P', 'candle_time': '2025-12-01T10:43:00', 'open': 2840.35, 'high': 2841.0, 'low': 2840.17, 'close': 2840.35, 'volume': 670.698}
             # Process NaNs in data payload
             nan_count += self._clean_nans(record_data)
             
