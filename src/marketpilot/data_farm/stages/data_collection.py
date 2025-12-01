@@ -144,7 +144,7 @@ class DataCollectionStage(BaseStage):
                 },
             )
             
-            # Pass start/end to each fetch
+            # fetch data
             tasks = [
                 self._fetch_single(
                     adapter, 
@@ -388,6 +388,7 @@ class DataCollectionStage(BaseStage):
         """Count records by schema type"""
         counts = {}
         for record in records:
+            # schema_type : 'price'
             schema_type = record.get("schema_type", "unknown")
             counts[schema_type] = counts.get(schema_type, 0) + 1
         return counts

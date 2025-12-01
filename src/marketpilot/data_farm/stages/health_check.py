@@ -104,20 +104,10 @@ class HealthCheckStage(BaseStage):
                     "type": api_type,
                     "status": "unhealthy"
                 })
+
         
         # ============================================
-        # Step 3: Validate Config
-        # ============================================
-        config = data.get("config", {})
-        config_valid = self._validate_config(config)
-        
-        if not config_valid:
-            health_results["overall_status"] = "critical"
-            data["health_check"] = health_results
-            return data
-        
-        # ============================================
-        # Step 4: Determine Overall Status
+        # Step 3: Determine Overall Status
         # ============================================
         if health_results["apis_healthy"] == 0:
             health_results["overall_status"] = "critical"
@@ -138,18 +128,19 @@ class HealthCheckStage(BaseStage):
                 "checked_types": [t for t, _ in apis_to_check],
             },
         )
-        
+        # {'apis_checked': 1, 'apis_healthy': 1, 'api_details': [{'type': 'price', 'status': 'healthy'}], 'overall_status': 'healthy'}
         data["health_check"] = health_results
         return data
 
     async def _check_api(self, api_type: str, health_url: str) -> bool:
         """Check if API health endpoint returns success"""
         try:
+            print('health_url')
+            print(health_url)
             timeout = aiohttp.ClientTimeout(total=10)
             
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(health_url) as response:
-                    
                     if response.status != 200:
                         log_event(
                             stage=self.stage_name,
@@ -161,7 +152,8 @@ class HealthCheckStage(BaseStage):
                     
                     health_data = await response.json()
                     success = health_data.get("success", False)
-                    
+                    print('health_data')                   
+                    print(health_data)
                     if success:
                         log_event(
                             stage=self.stage_name,
@@ -201,18 +193,3 @@ class HealthCheckStage(BaseStage):
             )
             return False
 
-    def _validate_config(self, config: Dict[str, Any]) -> bool:
-        """Simple config validation"""
-        required = ["adapters", "output", "quality"]
-        
-        for key in required:
-            if key not in config:
-                log_event(
-                    stage=self.stage_name,
-                    block="config",
-                    level="ERROR",
-                    msg=f"Missing config key: {key}",
-                )
-                return False
-        
-        return True

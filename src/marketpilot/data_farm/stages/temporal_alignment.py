@@ -95,7 +95,7 @@ class TemporalAlignmentStage(BaseStage):
                     record_data["timestamp"] = unix_ms
                     
                     # Also update the original field
-                    if field in ["candle_time", "published_at_utc", "date_utc"]:
+                    if field in [ "published_at_utc", "date_utc"]:
                         record_data[field] = unix_ms
                     
                     return True

@@ -19,7 +19,7 @@ class BaseAdapter(ABC):
         Args:
             config: Adapter configuration containing:
                 - vendor: Data vendor name (e.g., 'yfinance', 'alphavantage')
-                - id: Unique adapter identifier
+                - id: Unique adapter identifier (price_internal_001)
                 - cadence: Data collection frequency (e.g., '1min', 'daily')
                 - schema_type: Type of data schema (price, news, fundamental)
         """

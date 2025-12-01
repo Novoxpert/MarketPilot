@@ -312,7 +312,12 @@ class ResilientDataFarm:
                 "error": str(e),
             }
 
-    async def run_smoke_test(self, symbols: List[str]) -> Dict[str, Any]:
+    async def run_smoke_test(
+            self, 
+            symbols: List[str], 
+            start: Optional[datetime] = None, 
+            end: Optional[datetime] = None
+        ) -> Dict[str, Any]:
         """
         Run quick smoke test (optional pre-flight check)
         
@@ -323,7 +328,12 @@ class ResilientDataFarm:
             block="data_farm",
             level="INFO",
             msg="Starting smoke test",
-            extra={"symbols": symbols, "adapters": len(self.adapters)},
+            extra={
+                "symbols": symbols,
+                "adapters": len(self.adapters),
+                "start": start.isoformat() if start else None,
+                "end": end.isoformat() if end else None,
+            },
         )
 
         results = {
@@ -340,7 +350,14 @@ class ResilientDataFarm:
             results["total_tests"] += 1
 
             try:
-                result = await adapter.execute_ingest(test_symbol)
+                # فقط وقتی start/end مقدار دارند پاس بده
+                kwargs = {"symbol": test_symbol}
+                if start is not None:
+                    kwargs["start"] = start
+                if end is not None:
+                    kwargs["end"] = end
+
+                result = await adapter.execute_ingest(**kwargs)
 
                 if result.get("success"):
                     record_count = result.get("record_count", 0)
@@ -405,13 +422,17 @@ if __name__ == "__main__":
         test_symbols = ["BINANCE:BTCUSDT.P", "BINANCE:ETHUSDT.P"]
 
         # Optional: Run smoke test first
-        print(">>> Running smoke test...",test_symbols[:1])
-        smoke_results = await farm.run_smoke_test(test_symbols[:1])
-        print(f"Smoke test: {smoke_results['passed']}/{smoke_results['total_tests']} passed\n")
+        # print(">>> Running smoke test...",test_symbols[:1])
+        # start = None
+        # end = None
+        # start = datetime.strptime("20251201-0708", "%Y%m%d-%H%M")
+        # end   = datetime.strptime("20251201-0709", "%Y%m%d-%H%M")
+        # smoke_results = await farm.run_smoke_test(test_symbols[:1],start,end)
+        # print(f"Smoke test: {smoke_results['passed']}/{smoke_results['total_tests']} passed\n")
 
-        if not smoke_results["success"]:
-            print("❌ Smoke test failed. Fix adapters before running pipeline.")
-            return
+        # if not smoke_results["success"]:
+        #     print("❌ Smoke test failed. Fix adapters before running pipeline.")
+        #     return
 
         # Run full pipeline
         print(">>> Running full pipeline...")

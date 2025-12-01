@@ -89,11 +89,11 @@ class ResilientPriceAdapter(BaseAdapter):
                 "close": float(record.get("close", 0)),
                 "volume": float(record.get("volume", 0)),
                 # Optional fields (if present in API response)
-                **{
-                    k: record[k] 
-                    for k in ["adjusted_close", "split_coefficient", "dividend_amount"]
-                    if k in record
-                }
+                # **{
+                #     k: record[k] 
+                #     for k in ["adjusted_close", "split_coefficient", "dividend_amount"]
+                #     if k in record
+                # }
             })
         
         return transformed
@@ -112,6 +112,10 @@ class ResilientPriceAdapter(BaseAdapter):
             if end is None:
                 end = self.config.get("end")
             
+            print("-------price start")
+            print(start)
+            print("-------price end")
+            print(end)
             url = self._build_api_url(symbol, start, end)
             print("-------price url")
             print(url)
@@ -179,7 +183,7 @@ class ResilientPriceAdapter(BaseAdapter):
                     "metadata": metadata,
                 }
 
-            # ✅ TRANSFORM: Convert API format to schema-compliant flat records
+            # TRANSFORM: Convert API format to schema-compliant flat records
             transformed_data = self._transform_response(data_records, symbol)
             
             record_count = len(transformed_data)
@@ -194,7 +198,7 @@ class ResilientPriceAdapter(BaseAdapter):
 
             return {
                 "success": True,
-                "data": transformed_data,  # ✅ Now returns flat list
+                "data": transformed_data,
                 "vendor": self.vendor,
                 "adapter_id": self.adapter_id,
                 "ingested_at": datetime.utcnow().isoformat(),
