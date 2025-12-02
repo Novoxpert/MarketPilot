@@ -44,6 +44,7 @@ class DataExportStage(BaseStage):
         total_exported = 0
 
         # Export each symbol
+        # types_data/price/
         for symbol, types_data in grouped.items():
             sanitized = self._sanitize_symbol(symbol)
             symbol_dir = base_dir / sanitized
