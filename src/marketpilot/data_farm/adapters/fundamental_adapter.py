@@ -62,7 +62,7 @@ class ResilientFundamentalAdapter(BaseAdapter):
         }
         """
         try:
-            # ✅ Use config start/end if provided
+            # Use config start/end if provided
             if start is None:
                 start = self.config.get("start")
             if end is None:

@@ -1,13 +1,16 @@
 # Symbol Mapping Configuration
 # Maps trading symbols to asset slugs for news API
 
+# --------------------------------------
 # Cryptocurrency Mappings
+# --------------------------------------
 cryptocurrencies:
   BTC:
     slug: "bitcoin"
     aliases:
       - "BTCUSDT"
       - "BTCUSD"
+      - "BINANCE:BTCUSDT"
       - "BINANCE:BTCUSDT.P"
       - "BTC-USD"
       - "XBTUSD"
@@ -17,54 +20,40 @@ cryptocurrencies:
     aliases:
       - "ETHUSDT"
       - "ETHUSD"
+      - "BINANCE:ETHUSDT"
       - "BINANCE:ETHUSDT.P"
       - "ETH-USD"
-
-  USDT:
-    slug: "tether"
-    aliases:
-      - "USDTUSD"
-      - "USDT-USD"
-
-  USDC:
-    slug: "usd-coin"
-    aliases:
-      - "USDCUSD"
-      - "USDC-USD"
 
   BNB:
     slug: "binance-coin"
     aliases:
       - "BNBUSDT"
       - "BNBUSD"
+      - "BINANCE:BNBUSDT"
       - "BNB-USD"
-
-  XRP:
-    slug: "ripple"
-    aliases:
-      - "XRPUSDT"
-      - "XRPUSD"
-      - "XRP-USD"
-
-  ADA:
-    slug: "cardano"
-    aliases:
-      - "ADAUSDT"
-      - "ADAUSD"
-      - "ADA-USD"
 
   SOL:
     slug: "solana"
     aliases:
       - "SOLUSDT"
       - "SOLUSD"
+      - "BINANCE:SOLUSDT"
       - "SOL-USD"
+
+  XRP:
+    slug: "ripple"
+    aliases:
+      - "XRPUSDT"
+      - "XRPUSD"
+      - "BINANCE:XRPUSDT"
+      - "XRP-USD"
 
   DOGE:
     slug: "dogecoin"
     aliases:
       - "DOGEUSDT"
       - "DOGEUSD"
+      - "BINANCE:DOGEUSDT"
       - "DOGE-USD"
 
   DOT:
@@ -72,9 +61,35 @@ cryptocurrencies:
     aliases:
       - "DOTUSDT"
       - "DOTUSD"
+      - "BINANCE:DOTUSDT"
       - "DOT-USD"
 
+  ADA:
+    slug: "cardano"
+    aliases:
+      - "ADAUSDT"
+      - "ADAUSD"
+      - "BINANCE:ADAUSDT"
+      - "ADA-USD"
+
+  TON:
+    slug: "toncoin"
+    aliases:
+      - "TONUSDT"
+      - "BINANCE:TONUSDT"
+      - "TON-USD"
+
+  XLM:
+    slug: "stellar"
+    aliases:
+      - "XLMUSDT"
+      - "XLMUSD"
+      - "BINANCE:XLMUSDT"
+      - "XLM-USD"
+
+# --------------------------------------
 # Stock Mappings
+# --------------------------------------
 stocks:
   AAPL:
     slug: "apple"
@@ -82,11 +97,11 @@ stocks:
     aliases:
       - "NASDAQ:AAPL"
 
-  TSLA:
-    slug: "tesla"
-    name: "Tesla Inc."
+  MSFT:
+    slug: "microsoft"
+    name: "Microsoft Corporation"
     aliases:
-      - "NASDAQ:TSLA"
+      - "NASDAQ:MSFT"
 
   NVDA:
     slug: "nvidia"
@@ -95,18 +110,16 @@ stocks:
       - "NASDAQ:NVDA"
 
   GOOGL:
-    slug: "google"
+    slug: "alphabet"
     name: "Alphabet Inc."
     aliases:
       - "NASDAQ:GOOGL"
-      - "GOOG"
-      - "NASDAQ:GOOG"
 
-  MSFT:
-    slug: "microsoft"
-    name: "Microsoft Corporation"
+  META:
+    slug: "meta"
+    name: "Meta Platforms Inc."
     aliases:
-      - "NASDAQ:MSFT"
+      - "NASDAQ:META"
 
   AMZN:
     slug: "amazon"
@@ -114,35 +127,154 @@ stocks:
     aliases:
       - "NASDAQ:AMZN"
 
-  META:
-    slug: "meta"
-    name: "Meta Platforms Inc."
+  COST:
+    slug: "costco"
+    name: "Costco Wholesale Corp."
     aliases:
-      - "NASDAQ:META"
-      - "FB"
-      - "NASDAQ:FB"
+      - "NASDAQ:COST"
 
-  NFLX:
-    slug: "netflix"
-    name: "Netflix Inc."
+  AVGO:
+    slug: "broadcom"
+    name: "Broadcom Inc."
     aliases:
-      - "NASDAQ:NFLX"
+      - "NASDAQ:AVGO"
 
+  ASML:
+    slug: "asml"
+    name: "ASML Holding N.V."
+    aliases:
+      - "NASDAQ:ASML"
+
+  QCOM:
+    slug: "qualcomm"
+    name: "Qualcomm Inc."
+    aliases:
+      - "NASDAQ:QCOM"
+
+  CRM:
+    slug: "salesforce"
+    name: "Salesforce Inc."
+    aliases:
+      - "NYSE:CRM"
+
+  NOW:
+    slug: "servicenow"
+    name: "ServiceNow Inc."
+    aliases:
+      - "NYSE:NOW"
+
+  ORCL:
+    slug: "oracle"
+    name: "Oracle Corporation"
+    aliases:
+      - "NYSE:ORCL"
+
+  TSM:
+    slug: "tsmc"
+    name: "Taiwan Semiconductor Manufacturing Co."
+    aliases:
+      - "NYSE:TSM"
+
+  IBM:
+    slug: "ibm"
+    name: "International Business Machines"
+    aliases:
+      - "NYSE:IBM"
+
+  JPM:
+    slug: "jpmorgan"
+    name: "JPMorgan Chase & Co."
+    aliases:
+      - "NYSE:JPM"
+
+  BAC:
+    slug: "bank-of-america"
+    name: "Bank of America Corp."
+    aliases:
+      - "NYSE:BAC"
+
+  WFC:
+    slug: "wells-fargo"
+    name: "Wells Fargo & Company"
+    aliases:
+      - "NYSE:WFC"
+
+  MS:
+    slug: "morgan-stanley"
+    name: "Morgan Stanley"
+    aliases:
+      - "NYSE:MS"
+
+  XOM:
+    slug: "exxon-mobil"
+    name: "Exxon Mobil Corporation"
+    aliases:
+      - "NYSE:XOM"
+
+# --------------------------------------
+# Forex Mappings
+# --------------------------------------
+forex:
+  USDCAD:
+    slug: "usd-cad"
+    aliases:
+      - "IG:USDCAD"
+
+  EURUSD:
+    slug: "eur-usd"
+    aliases:
+      - "IG:EURUSD"
+
+  USDJPY:
+    slug: "usd-jpy"
+    aliases:
+      - "IG:USDJPY"
+
+  GBPUSD:
+    slug: "gbp-usd"
+    aliases:
+      - "IG:GBPUSD"
+
+  AUDUSD:
+    slug: "aud-usd"
+    aliases:
+      - "IG:AUDUSD"
+
+  AUDEUR:
+    slug: "aud-eur"
+    aliases:
+      - "IG:AUDEUR"
+
+  EURCAD:
+    slug: "eur-cad"
+    aliases:
+      - "IG:EURCAD"
+
+  NZDUSD:
+    slug: "nzd-usd"
+    aliases:
+      - "IG:NZDUSD"
+
+  XAUUSD:
+    slug: "gold"
+    aliases:
+      - "OANDA:XAUUSD"
+
+  XAGUSD:
+    slug: "silver"
+    aliases:
+      - "OANDA:XAGUSD"
+
+# --------------------------------------
 # Mapping Rules
+# --------------------------------------
 mapping_rules:
-  # Try exact match first
   exact_match_priority: true
-
-  # Case sensitivity
   case_sensitive: false
+  fallback_strategy: "lowercase"
 
-  # Fallback strategy when no mapping found
-  fallback_strategy: "lowercase"  # Options: lowercase, error, original
-
-  # Extract base symbol from exchange:pair.type format
   extract_base_from_exchange_format: true
 
-  # Common cryptocurrency pairs to strip
   strip_pairs:
     - "USDT"
     - "USD"
@@ -150,17 +282,17 @@ mapping_rules:
     - "BUSD"
     - "EUR"
 
-  # Exchange prefixes to remove
   exchange_prefixes:
     - "BINANCE:"
     - "NASDAQ:"
     - "NYSE:"
+    - "IG:"
+    - "OANDA:"
     - "COINBASE:"
     - "KRAKEN:"
 
-  # Symbol suffixes to remove
   symbol_suffixes:
-    - ".P"  # Perpetual
-    - ".F"  # Futures
+    - ".P"
+    - ".F"
     - "-USD"
     - "-USDT"

@@ -101,7 +101,42 @@ class ResilientNewsAdapter(BaseAdapter):
                 article_time = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
                 if most_recent_time is None or article_time > most_recent_time:
                     most_recent_time = article_time
-            
+            # {
+            # "slug": "bitcoin-drop-isnt-the-real-crisis-heres-what-the-market-fears",
+            # "title": "Bitcoin Drop Isn’t the Real Crisis – Here’s What the Market Fears",
+            # "subtitle": "Key Takeaways The real fear in the market is the possible removal of Bitcoin-heavy companies from MSCI indexes, not just […] The post Bitcoin Drop Isn’t the Real Crisis – Here’s What the Market Fears appeared first on Coindoo.",
+            # "source": "coinmarketcap",
+            # "sourceName": "Coindoo",
+            # "sourceUrl": "https://coinmarketcap.com/community/en/articles/692f15261003e82d94599185",
+            # "releasedAt": "2025-12-02T16:30:13",
+            # "assets": [
+            #     {
+            #     "name": "Metaplanet",
+            #     "slug": "metaplanet-ethereum",
+            #     "symbol": "MTPLF"
+            #     },
+            #     {
+            #     "name": "American Bitcoin",
+            #     "slug": "american-bitcoin",
+            #     "symbol": "ABTC"
+            #     },
+            #     {
+            #     "name": "Bitcoin",
+            #     "slug": "bitcoin",
+            #     "symbol": "BTC"
+            #     },
+            #     {
+            #     "name": "American Bitcoin",
+            #     "slug": "american-bitcoin-solana",
+            #     "symbol": "ABTC"
+            #     },
+            #     {
+            #     "name": "Real",
+            #     "slug": "realyn",
+            #     "symbol": "REAL"
+            #     }
+            # ]
+            # },
             transformed_items.append({
                 "news_id": article.get("slug", ""),
                 "symbol": symbol,  # Use requested symbol
