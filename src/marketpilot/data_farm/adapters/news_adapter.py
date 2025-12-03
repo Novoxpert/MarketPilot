@@ -1,9 +1,10 @@
 """
-Resilient News Adapter 
+Resilient News Adapter
 """
 
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
+import asyncio
 import os
 from urllib.parse import urlencode
 from marketpilot.data_farm.adapters.base_adapter import BaseAdapter
@@ -23,7 +24,14 @@ class ResilientNewsAdapter(BaseAdapter):
             raise ValueError("NEWS_API_BASE_URL not found in environment")
 
         self.default_limit = config.get("limit", 100)
+        
+        # Pagination configuration
+        self.enable_pagination = config.get("enable_pagination", True)
+        self.max_pages = config.get("max_pages", 10)
+        self.max_total_records = config.get("max_total_records", 1000)
+        self.page_delay = config.get("page_delay", 0.5)  # Delay between pages (seconds)
 
+        # Retry handler
         self.retry_handler = create_retry_handler(
             adapter_id=self.adapter_id,
             max_retries=config.get("max_retries", 3),
@@ -36,8 +44,15 @@ class ResilientNewsAdapter(BaseAdapter):
             stage="initialization",
             block=self.adapter_id,
             level="INFO",
-            msg="News adapter initialized",
-            extra={"base_url": self.api_base_url, "limit": self.default_limit},
+            msg="News adapter initialized with pagination support",
+            extra={
+                "base_url": self.api_base_url,
+                "limit": self.default_limit,
+                "pagination_enabled": self.enable_pagination,
+                "max_pages": self.max_pages,
+                "max_total_records": self.max_total_records,
+                "page_delay": self.page_delay,
+            },
         )
 
     def _build_api_url(
@@ -46,8 +61,15 @@ class ResilientNewsAdapter(BaseAdapter):
         start: Optional[datetime],
         end: Optional[datetime],
         limit: int = 100,
+        cursor: Optional[str] = None,
     ) -> str:
-        """Build API URL"""
+        """
+        Build API URL with optional cursor for pagination.
+        
+        API uses cursor-based pagination:
+        - First page: no cursor parameter
+        - Subsequent pages: add cursor from previous response
+        """
         if start is None or end is None:
             end = datetime.utcnow()
             start = end - timedelta(days=1)
@@ -60,15 +82,20 @@ class ResilientNewsAdapter(BaseAdapter):
             "sort_by": "releasedAt",
             "order": "desc",
         }
+        
+        # Add cursor for pagination (only if provided)
+        if cursor:
+            params["cursor"] = cursor
+        
         return f"{self.api_base_url}?{urlencode(params)}"
 
     def _transform_response(
         self, articles: List[Dict], symbol: str, start: datetime, end: datetime
     ) -> Dict[str, Any]:
         """
-        Transform API response to news schema format
+        Transform API response to news schema format.
         
-        API format:
+        API format example:
         [
             {
                 "slug": "article-123",
@@ -78,11 +105,8 @@ class ResilientNewsAdapter(BaseAdapter):
                 "source": "Reuters",
                 "sourceName": "Reuters",
                 "sourceUrl": "https://...",
-                "assets": [
-                    {"symbol": "BINANCE:BTCUSDT.P", "name": "Bitcoin"}
-                ]
-            },
-            ...
+                "assets": [{"symbol": "BINANCE:BTCUSDT.P", "name": "Bitcoin"}]
+            }
         ]
         """
         transformed_items = []
@@ -90,56 +114,21 @@ class ResilientNewsAdapter(BaseAdapter):
 
         for article in articles:
             assets = article.get("assets", [])
-            # Primary symbol is the first asset or the requested symbol
             primary_symbol = assets[0].get("symbol") if assets else symbol
 
-            # Normalize timestamp field
             published_at = article.get("releasedAt") or article.get("published_at")
             
-            # Track most recent article time for wrapper timestamp
             if published_at:
-                article_time = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-                if most_recent_time is None or article_time > most_recent_time:
-                    most_recent_time = article_time
-            # {
-            # "slug": "bitcoin-drop-isnt-the-real-crisis-heres-what-the-market-fears",
-            # "title": "Bitcoin Drop Isn’t the Real Crisis – Here’s What the Market Fears",
-            # "subtitle": "Key Takeaways The real fear in the market is the possible removal of Bitcoin-heavy companies from MSCI indexes, not just […] The post Bitcoin Drop Isn’t the Real Crisis – Here’s What the Market Fears appeared first on Coindoo.",
-            # "source": "coinmarketcap",
-            # "sourceName": "Coindoo",
-            # "sourceUrl": "https://coinmarketcap.com/community/en/articles/692f15261003e82d94599185",
-            # "releasedAt": "2025-12-02T16:30:13",
-            # "assets": [
-            #     {
-            #     "name": "Metaplanet",
-            #     "slug": "metaplanet-ethereum",
-            #     "symbol": "MTPLF"
-            #     },
-            #     {
-            #     "name": "American Bitcoin",
-            #     "slug": "american-bitcoin",
-            #     "symbol": "ABTC"
-            #     },
-            #     {
-            #     "name": "Bitcoin",
-            #     "slug": "bitcoin",
-            #     "symbol": "BTC"
-            #     },
-            #     {
-            #     "name": "American Bitcoin",
-            #     "slug": "american-bitcoin-solana",
-            #     "symbol": "ABTC"
-            #     },
-            #     {
-            #     "name": "Real",
-            #     "slug": "realyn",
-            #     "symbol": "REAL"
-            #     }
-            # ]
-            # },
+                try:
+                    article_time = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                    if most_recent_time is None or article_time > most_recent_time:
+                        most_recent_time = article_time
+                except (ValueError, AttributeError):
+                    pass
+
             transformed_items.append({
                 "news_id": article.get("slug", ""),
-                "symbol": symbol,  # Use requested symbol
+                "symbol": symbol,
                 "primary_symbol": primary_symbol,
                 "published_at_utc": published_at,
                 "title": article.get("title", ""),
@@ -152,7 +141,6 @@ class ResilientNewsAdapter(BaseAdapter):
                 "mapping_confidence": 1.0 if assets else 0.5,
             })
 
-        # Use most recent article time as timestamp (not ingestion time)
         wrapper_timestamp = (
             most_recent_time.isoformat() 
             if most_recent_time 
@@ -163,8 +151,201 @@ class ResilientNewsAdapter(BaseAdapter):
             "symbol": symbol,
             "startdate": start.isoformat(),
             "enddate": end.isoformat(),
-            "timestamp": wrapper_timestamp,  # Most recent article, not ingestion time
+            "timestamp": wrapper_timestamp,
             "data": transformed_items,
+        }
+
+    async def _fetch_all_pages(
+        self,
+        asset_slug: str,
+        symbol: str,
+        start: datetime,
+        end: datetime,
+    ) -> Dict[str, Any]:
+        """
+        Fetch all pages of news data with cursor-based pagination.
+        
+        Process:
+        1. Fetch first page (no cursor)
+        2. Check pagination.has_next
+        3. Fetch next page using pagination.next_cursor
+        4. Stop when has_next=False or limits reached
+        """
+        all_articles = []
+        current_cursor = None
+        page_count = 0
+        total_fetched = 0
+        
+        pagination_stats = {
+            "total_pages_fetched": 0,
+            "total_records": 0,
+            "truncated": False,
+            "truncation_reason": None,
+            "last_cursor": None,
+        }
+
+        while True:
+            page_count += 1
+            
+            # Page limit check
+            if page_count > self.max_pages:
+                log_event(
+                    stage="ingestion",
+                    block=self.adapter_id,
+                    level="WARNING",
+                    msg=f"Reached max_pages limit ({self.max_pages})",
+                    extra={
+                        "symbol": symbol,
+                        "records_fetched": total_fetched,
+                        "pages_fetched": page_count - 1,
+                    },
+                )
+                pagination_stats["truncated"] = True
+                pagination_stats["truncation_reason"] = f"max_pages_limit_{self.max_pages}"
+                break
+
+            # Record limit check
+            if total_fetched >= self.max_total_records:
+                log_event(
+                    stage="ingestion",
+                    block=self.adapter_id,
+                    level="WARNING",
+                    msg=f"Reached max_total_records limit ({self.max_total_records})",
+                    extra={
+                        "symbol": symbol,
+                        "records_fetched": total_fetched,
+                        "pages_fetched": page_count - 1,
+                    },
+                )
+                pagination_stats["truncated"] = True
+                pagination_stats["truncation_reason"] = f"max_records_limit_{self.max_total_records}"
+                break
+
+            # Build URL using cursor
+            url = self._build_api_url(
+                asset_slug, start, end, self.default_limit, current_cursor
+            )
+            
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="DEBUG",
+                msg=f"Fetching page {page_count}",
+                extra={
+                    "symbol": symbol,
+                    "page": page_count,
+                    "cursor": current_cursor[:30] + "..." if current_cursor else None,
+                    "total_so_far": total_fetched,
+                },
+            )
+
+            # Apply delay for rate limiting
+            if page_count > 1 and self.page_delay > 0:
+                await asyncio.sleep(self.page_delay)
+
+            # Fetch with retry handler
+            status_code, api_response = await self.retry_handler.fetch_with_retry(
+                url=url, symbol=symbol, method="GET"
+            )
+
+            # HTTP error
+            if status_code != 200 or api_response is None:
+                error_msg = (
+                    f"API returned status {status_code}"
+                    if status_code > 0
+                    else "Request failed after retries"
+                )
+                log_event(
+                    stage="ingestion",
+                    block=self.adapter_id,
+                    level="ERROR",
+                    msg=f"Failed at page {page_count}: {error_msg}",
+                    extra={"status": status_code, "page": page_count, "symbol": symbol},
+                )
+                
+                if page_count == 1:
+                    return {"error": error_msg, "status_code": status_code}
+                
+                pagination_stats["truncated"] = True
+                pagination_stats["truncation_reason"] = f"error_at_page_{page_count}"
+                break
+
+            # API success flag check
+            if not api_response.get("success", False):
+                log_event(
+                    stage="ingestion",
+                    block=self.adapter_id,
+                    level="ERROR",
+                    msg=f"API returned success=false at page {page_count}",
+                    extra={"page": page_count, "symbol": symbol},
+                )
+                if page_count == 1:
+                    return {"error": "API returned success=false"}
+                else:
+                    pagination_stats["truncated"] = True
+                    pagination_stats["truncation_reason"] = f"api_error_at_page_{page_count}"
+                    break
+
+            # Extract data
+            page_data = api_response.get("data", [])
+            pagination = api_response.get("pagination", {})
+            
+            all_articles.extend(page_data)
+            total_fetched += len(page_data)
+            
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="INFO",
+                msg=f"Page {page_count} fetched successfully",
+                extra={
+                    "symbol": symbol,
+                    "page": page_count,
+                    "articles_in_page": len(page_data),
+                    "returned_in_page": pagination.get("returned", len(page_data)),
+                    "total_so_far": total_fetched,
+                    "has_next": pagination.get("has_next", False),
+                },
+            )
+
+            has_next = pagination.get("has_next", False)
+            next_cursor = pagination.get("next_cursor")
+            pagination_stats["last_cursor"] = next_cursor
+            
+            if not has_next:
+                log_event(
+                    stage="ingestion",
+                    block=self.adapter_id,
+                    level="INFO",
+                    msg="Reached end of pagination (has_next=false)",
+                    extra={
+                        "symbol": symbol,
+                        "total_pages": page_count,
+                        "total_records": total_fetched,
+                    },
+                )
+                break
+            
+            if not next_cursor:
+                log_event(
+                    stage="ingestion",
+                    block=self.adapter_id,
+                    level="WARNING",
+                    msg="has_next=true but next_cursor is missing",
+                    extra={"symbol": symbol, "page": page_count, "pagination": pagination},
+                )
+                pagination_stats["truncated"] = True
+                pagination_stats["truncation_reason"] = "missing_next_cursor"
+                break
+            
+            current_cursor = next_cursor
+
+        pagination_stats["total_pages_fetched"] = page_count
+        pagination_stats["total_records"] = total_fetched
+
+        return {
+            "articles": all_articles,
+            "pagination_stats": pagination_stats,
         }
 
     async def _execute_ingest_internal(
@@ -173,69 +354,83 @@ class ResilientNewsAdapter(BaseAdapter):
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """Execute news data ingestion with schema-compliant transformation"""
+        """Execute news data ingestion with pagination support"""
         try:
-            # Use config start/end if provided (for time range override)
             if start is None:
                 start = self.config.get("start")
             if end is None:
                 end = self.config.get("end")
             
-            # Default to last 24 hours if still None
             if start is None or end is None:
                 end = datetime.utcnow()
                 start = end - timedelta(days=1)
 
-            # Map symbol to slug
             asset_slug = map_symbol_to_slug(symbol)
 
-            url = self._build_api_url(asset_slug, start, end, self.default_limit)
-            print("-------news url")
-            print(url)
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
-                level="DEBUG",
-                msg="Fetching news data",
+                level="INFO",
+                msg="Starting news ingestion",
                 extra={
-                    "symbol": symbol, 
+                    "symbol": symbol,
                     "asset_slug": asset_slug,
-                    "start": start.isoformat(),
-                    "end": end.isoformat(),
+                    "time_range": f"{start.isoformat()} to {end.isoformat()}",
+                    "pagination_enabled": self.enable_pagination,
                 },
             )
 
-            # Fetch with retry
-            status_code, api_response = await self.retry_handler.fetch_with_retry(
-                url=url, symbol=symbol, method="GET"
-            )
-
-            # Handle failure
-            if status_code != 200 or api_response is None:
-                error_msg = (
-                    f"API returned status {status_code}"
-                    if status_code > 0
-                    else "Request failed after retries"
+            if self.enable_pagination:
+                fetch_result = await self._fetch_all_pages(asset_slug, symbol, start, end)
+            else:
+                url = self._build_api_url(asset_slug, start, end, self.default_limit)
+                print("-------news url")
+                print(url)
+                status_code, api_response = await self.retry_handler.fetch_with_retry(
+                    url=url, symbol=symbol, method="GET"
                 )
+                
+                # Handle failure
+                if status_code != 200 or not api_response:
+                    return {
+                        "success": False,
+                        "error": f"API returned status {status_code}",
+                        "vendor": self.vendor,
+                        "adapter_id": self.adapter_id,
+                    }
+                
+                # Check API success flag
+                if not api_response.get("success", False):
+                    return {
+                        "success": False,
+                        "error": "API returned success=false",
+                        "vendor": self.vendor,
+                        "adapter_id": self.adapter_id,
+                    }
+                
+                page_data = api_response.get("data", [])
+                pagination = api_response.get("pagination", {})
+                
+                fetch_result = {
+                    "articles": page_data,
+                    "pagination_stats": {
+                        "total_pages_fetched": 1,
+                        "total_records": len(page_data),
+                        "truncated": pagination.get("has_next", False),
+                        "truncation_reason": "pagination_disabled" if pagination.get("has_next") else None,
+                    }
+                }
+
+            if "error" in fetch_result:
                 return {
                     "success": False,
-                    "error": error_msg,
+                    "error": fetch_result["error"],
                     "vendor": self.vendor,
                     "adapter_id": self.adapter_id,
                 }
 
-            # Check API success flag
-            if not api_response.get("success", False):
-                return {
-                    "success": False,
-                    "error": "API returned success=false",
-                    "vendor": self.vendor,
-                    "adapter_id": self.adapter_id,
-                }
-
-            # Extract data
-            news_data = api_response.get("data", [])
-            pagination = api_response.get("pagination", {})
+            news_data = fetch_result["articles"]
+            pagination_stats = fetch_result["pagination_stats"]
 
             if not news_data:
                 log_event(
@@ -243,6 +438,7 @@ class ResilientNewsAdapter(BaseAdapter):
                     block=self.adapter_id,
                     level="WARNING",
                     msg=f"No news data for {symbol}",
+                    extra={"asset_slug": asset_slug},
                 )
                 # Return empty but successful result with schema structure
                 empty_result = {
@@ -258,10 +454,12 @@ class ResilientNewsAdapter(BaseAdapter):
                     "vendor": self.vendor,
                     "adapter_id": self.adapter_id,
                     "record_count": 0,
-                    "metadata": {"pagination": pagination, "asset_slug": asset_slug},
+                    "metadata": {
+                        "pagination": pagination_stats,
+                        "asset_slug": asset_slug,
+                    },
                 }
 
-            # Transform response to schema format
             transformed_data = self._transform_response(news_data, symbol, start, end)
             record_count = len(news_data)
 
@@ -269,28 +467,31 @@ class ResilientNewsAdapter(BaseAdapter):
                 stage="ingestion",
                 block=self.adapter_id,
                 level="INFO",
-                msg=f"Successfully ingested and transformed {record_count} news articles",
+                msg=f"Successfully ingested {record_count} news articles",
                 extra={
-                    "symbol": symbol, 
+                    "symbol": symbol,
                     "record_count": record_count,
-                    "time_range": {
-                        "start": start.isoformat(),
-                        "end": end.isoformat(),
-                    }
+                    "pages_fetched": pagination_stats["total_pages_fetched"],
+                    "truncated": pagination_stats.get("truncated", False),
+                    "truncation_reason": pagination_stats.get("truncation_reason"),
+                    "time_range": {"start": start.isoformat(), "end": end.isoformat()},
                 },
             )
 
             return {
                 "success": True,
-                "data": transformed_data,  # ✅ Schema-compliant wrapper
+                "data": transformed_data,
                 "vendor": self.vendor,
                 "adapter_id": self.adapter_id,
                 "ingested_at": datetime.utcnow().isoformat(),
                 "record_count": record_count,
                 "metadata": {
-                    "pagination": pagination,
+                    "pagination": pagination_stats,
                     "asset_slug": asset_slug,
-                    "time_range": {"start": start.isoformat(), "end": end.isoformat()},
+                    "time_range": {
+                        "start": start.isoformat(),
+                        "end": end.isoformat()
+                    },
                 },
             }
 
@@ -301,7 +502,11 @@ class ResilientNewsAdapter(BaseAdapter):
                 block=self.adapter_id,
                 level="ERROR",
                 msg=error_msg,
-                extra={"symbol": symbol},
+                extra={
+                    "symbol": symbol,
+                    "error_type": type(e).__name__,
+                    "error_details": str(e),
+                },
             )
             return {
                 "success": False,
