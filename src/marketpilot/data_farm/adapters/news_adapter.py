@@ -22,6 +22,9 @@ class ResilientNewsAdapter(BaseAdapter):
         self.api_base_url = os.getenv("NEWS_API_BASE_URL")
         if not self.api_base_url:
             raise ValueError("NEWS_API_BASE_URL not found in environment")
+        
+        # Lock per symbol to prevent concurrent fetches
+        self._fetch_locks: Dict[str, asyncio.Lock] = {}
 
         self.default_limit = config.get("limit", 100)
         
@@ -29,7 +32,7 @@ class ResilientNewsAdapter(BaseAdapter):
         self.enable_pagination = config.get("enable_pagination", True)
         self.max_pages = config.get("max_pages", 10)
         self.max_total_records = config.get("max_total_records", 1000)
-        self.page_delay = config.get("page_delay", 0.5)  # Delay between pages (seconds)
+        self.page_delay = config.get("page_delay", 0.5)
 
         # Retry handler
         self.retry_handler = create_retry_handler(
@@ -63,13 +66,7 @@ class ResilientNewsAdapter(BaseAdapter):
         limit: int = 100,
         cursor: Optional[str] = None,
     ) -> str:
-        """
-        Build API URL with optional cursor for pagination.
-        
-        API uses cursor-based pagination:
-        - First page: no cursor parameter
-        - Subsequent pages: add cursor from previous response
-        """
+        """Build API URL with cursor-based pagination"""
         if start is None or end is None:
             end = datetime.utcnow()
             start = end - timedelta(days=1)
@@ -83,7 +80,6 @@ class ResilientNewsAdapter(BaseAdapter):
             "order": "desc",
         }
         
-        # Add cursor for pagination (only if provided)
         if cursor:
             params["cursor"] = cursor
         
@@ -154,15 +150,7 @@ class ResilientNewsAdapter(BaseAdapter):
         start: datetime,
         end: datetime,
     ) -> Dict[str, Any]:
-        """
-        Fetch all pages of news data with cursor-based pagination.
-        
-        Process:
-        1. Fetch first page (no cursor)
-        2. Check pagination.has_next
-        3. Fetch next page using pagination.next_cursor
-        4. Stop when has_next=False or limits reached
-        """
+        """Fetch all pages of news data with cursor-based pagination"""
         all_articles = []
         current_cursor = None
         page_count = 0
@@ -348,6 +336,20 @@ class ResilientNewsAdapter(BaseAdapter):
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """Execute news data ingestion with pagination support"""
+        # Prevent concurrent fetches for same symbol
+        if symbol not in self._fetch_locks:
+            self._fetch_locks[symbol] = asyncio.Lock()
+        
+        async with self._fetch_locks[symbol]:
+            return await self._execute_ingest_locked(symbol, start, end)
+    
+    async def _execute_ingest_locked(
+        self,
+        symbol: str,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
+        """Internal method with lock protection"""
         try:
             if start is None:
                 start = self.config.get("start")
@@ -392,7 +394,7 @@ class ResilientNewsAdapter(BaseAdapter):
                         "adapter_id": self.adapter_id,
                     }
                 
-                # Check API success flag
+                # Check API success flag                
                 if not api_response.get("success", False):
                     return {
                         "success": False,
@@ -433,7 +435,6 @@ class ResilientNewsAdapter(BaseAdapter):
                     msg=f"No news data for {symbol}",
                     extra={"asset_slug": asset_slug},
                 )
-                # Return empty but successful result with schema structure
                 empty_result = {
                     "symbol": symbol,
                     "startdate": start.isoformat(),
