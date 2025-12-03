@@ -21,6 +21,9 @@ class ResilientPriceAdapter(BaseAdapter):
         self.api_base_url = os.getenv("PRICE_API_BASE_URL")
         if not self.api_base_url:
             raise ValueError("PRICE_API_BASE_URL not found in environment")
+        
+        # Lock per symbol to prevent concurrent fetches
+        self._fetch_locks: Dict[str, asyncio.Lock] = {}
 
         # Pagination configuration
         self.default_limit = config.get("limit", 1000)
@@ -57,15 +60,10 @@ class ResilientPriceAdapter(BaseAdapter):
         start: Optional[datetime],
         end: Optional[datetime],
         limit: int = 1000,
-        offset: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> str:
         """
-        Build API URL with pagination parameters
-        
-        Supports both offset-based and cursor-based pagination:
-        - offset: Traditional pagination (page 1 = offset 0, page 2 = offset 1000)
-        - cursor: Cursor-based pagination (like news API)
+        Build API URL with cursor-based pagination
         """
         if start is None or end is None:
             end = datetime.utcnow()
@@ -78,11 +76,8 @@ class ResilientPriceAdapter(BaseAdapter):
             "limit": limit,
         }
         
-        # Pagination parameter
         if cursor:
             params["cursor"] = cursor
-        elif offset is not None and offset > 0:
-            params["offset"] = offset
         
         return f"{self.api_base_url}?{urlencode(params)}"
 
@@ -132,18 +127,13 @@ class ResilientPriceAdapter(BaseAdapter):
         end: datetime,
     ) -> Dict[str, Any]:
         """
-        Fetch all pages of price data with pagination
-        
-        Supports both pagination methods:
-        1. Cursor-based (if API returns next_cursor)
-        2. Offset-based (fallback if no cursor support)
+        Fetch all pages of price data with cursor-based pagination
         
         Returns:
             Dict with combined records and pagination stats
         """
         all_records = []
         current_cursor = None
-        current_offset = 0
         page_count = 0
         total_fetched = 0
         
@@ -152,7 +142,7 @@ class ResilientPriceAdapter(BaseAdapter):
             "total_records": 0,
             "truncated": False,
             "truncation_reason": None,
-            "pagination_method": "unknown",  # cursor or offset
+            "pagination_method": "cursor",
         }
 
         while True:
@@ -194,7 +184,6 @@ class ResilientPriceAdapter(BaseAdapter):
             url = self._build_api_url(
                 symbol, start, end, 
                 self.default_limit, 
-                current_offset,
                 current_cursor
             )
             print("-------price url")
@@ -208,7 +197,6 @@ class ResilientPriceAdapter(BaseAdapter):
                 extra={
                     "symbol": symbol,
                     "page": page_count,
-                    "offset": current_offset if not current_cursor else None,
                     "cursor": current_cursor[:30] + "..." if current_cursor else None,
                     "total_so_far": total_fetched,
                 },
@@ -264,15 +252,6 @@ class ResilientPriceAdapter(BaseAdapter):
             page_records = len(page_data)
             total_fetched += page_records
             
-            # Detect pagination type
-            has_next_cursor = pagination.get("has_next", False) and pagination.get("next_cursor")
-            has_more_data = page_records >= self.default_limit
-            
-            if has_next_cursor:
-                pagination_stats["pagination_method"] = "cursor"
-            elif pagination_stats["pagination_method"] == "unknown":
-                pagination_stats["pagination_method"] = "offset"
-            
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
@@ -283,24 +262,21 @@ class ResilientPriceAdapter(BaseAdapter):
                     "page": page_count,
                     "records_in_page": page_records,
                     "total_so_far": total_fetched,
-                    "pagination_method": pagination_stats["pagination_method"],
                 },
             )
 
             # Check if pagination continues
+            has_next_cursor = pagination.get("has_next", False) and pagination.get("next_cursor")
+            
             if has_next_cursor:
-                # Cursor-based pagination
                 current_cursor = pagination.get("next_cursor")
-            elif has_more_data:
-                # Offset-based pagination
-                current_offset += self.default_limit
             else:
                 # No more data
                 log_event(
                     stage="ingestion",
                     block=self.adapter_id,
                     level="INFO",
-                    msg=f"Reached end of data (received {page_records} < {self.default_limit})",
+                    msg=f"Reached end of data",
                     extra={
                         "symbol": symbol,
                         "total_pages": page_count,
@@ -328,6 +304,20 @@ class ResilientPriceAdapter(BaseAdapter):
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """Execute price data ingestion with pagination support"""
+        # Prevent concurrent fetches for same symbol
+        if symbol not in self._fetch_locks:
+            self._fetch_locks[symbol] = asyncio.Lock()
+        
+        async with self._fetch_locks[symbol]:
+            return await self._execute_ingest_locked(symbol, start, end)
+    
+    async def _execute_ingest_locked(
+        self,
+        symbol: str,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
+        """Internal method with lock protection"""
         try:
             log_event(
                 stage="ingestion",
