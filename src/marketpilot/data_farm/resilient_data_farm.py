@@ -92,7 +92,7 @@ class ResilientDataFarm:
         setup_logging(log_level)
 
         # Create output directory
-        output_dir = self.config.get("output", {}).get("base_dir", "data_farm_exports")
+        output_dir = self.config.get("output", {}).get("base_dir", "data")
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
         log_event(
@@ -421,29 +421,33 @@ if __name__ == "__main__":
         # Define test symbols
         test_symbols = ["BINANCE:BTCUSDT.P", "BINANCE:ETHUSDT.P"]
 
-        # Optional: Run smoke test first
-        print(">>> Running smoke test...",test_symbols[:1])
+        # # Optional: Run smoke test first
+        # # print(">>> Running smoke test...",test_symbols[:1])
         start = None
         end = None
-        start = datetime.strptime("20251201-0708", "%Y%m%d-%H%M")
+        start = datetime.strptime("20251101-0708", "%Y%m%d-%H%M")
         end   = datetime.strptime("20251201-0709", "%Y%m%d-%H%M")
-        smoke_results = await farm.run_smoke_test(test_symbols[:1],start,end)
-        print(f"Smoke test: {smoke_results['passed']}/{smoke_results['total_tests']} passed\n")
+        # smoke_results = await farm.run_smoke_test(test_symbols[:1],start,end)
+        # print(f"Smoke test: {smoke_results['passed']}/{smoke_results['total_tests']} passed\n")
 
-        if not smoke_results["success"]:
-            print("❌ Smoke test failed. Fix adapters before running pipeline.")
-            return
+        # if not smoke_results["success"]:
+        #     print("❌ Smoke test failed. Fix adapters before running pipeline.")
+        #     return
 
         # Run full pipeline
-        # print(">>> Running full pipeline...")
+        print(">>> Running full pipeline...")
         # results = await farm.run_complete_pipeline(test_symbols)
-
-        # if results.get("pipeline_success"):
-        #     print("\n✅ Pipeline completed successfully")
-        #     print(f"Duration: {results['pipeline_duration']:.2f}s")
-        #     print(f"Records: {results.get('export_stats', {}).get('records_exported', 0)}")
-        # else:
-        #     print("\n❌ Pipeline failed")
-        #     print(f"Error: {results.get('error')}")
+        results = await farm.run_complete_pipeline(
+            symbols=test_symbols,
+            start_date=start, 
+            end_date=end
+        )
+        if results.get("pipeline_success"):
+            print("\n✅ Pipeline completed successfully")
+            print(f"Duration: {results['pipeline_duration']:.2f}s")
+            print(f"Records: {results.get('export_stats', {}).get('records_exported', 0)}")
+        else:
+            print("\n❌ Pipeline failed")
+            print(f"Error: {results.get('error')}")
 
     asyncio.run(_main())

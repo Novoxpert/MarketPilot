@@ -77,7 +77,7 @@ class TemporalAlignmentStage(BaseStage):
         timestamp_fields = [
             "candle_time",      # Price data
             "timestamp",        # Generic
-            "published_at_utc", # News data
+            "releasedAt",       # News data
             "date_utc",         # Fundamental data
             "date",             # Generic date
         ]
@@ -93,11 +93,7 @@ class TemporalAlignmentStage(BaseStage):
                 if unix_ms is not None:
                     # Store Unix ms in standard 'timestamp' field
                     record_data["timestamp"] = unix_ms
-                    
-                    # Also update the original field
-                    if field in [ "published_at_utc", "date_utc"]:
-                        record_data[field] = unix_ms
-                    
+                                   
                     return True
                     
             except Exception as e:

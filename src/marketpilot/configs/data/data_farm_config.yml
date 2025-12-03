@@ -3,9 +3,9 @@ logging:
   level: INFO
 
 output:
-  base_dir: data               # Dynamic from config
-  formats: ["parquet"]         # Options: ["parquet", "json"]
-  compression: snappy          # snappy, gzip, etc.
+  base_dir: data
+  formats: ["parquet"]
+  compression: snappy
 
 # Target symbols
 target_symbols:
@@ -13,28 +13,19 @@ target_symbols:
   - "BINANCE:ETHUSDT.P"
 
 adapters:
-  # Price Data Adapter (disabled example)
-  # - id: price_internal_001
-  #   type: price
-  #   vendor: internal_price_api
-  #   cadence: 1min
-  #   schema_type: price
-  #   start: optional datetime
-  #   end: optional datetime
-
-  # News Data Adapter
-  - id: "news_internal_001"
-    type: "news"
-    vendor: "internal_news_api"
-    cadence: "5min"
-    schema_type: "news"
-    limit: 100
+  # Price Data Adapter
+  - id: price_internal_001
+    type: price
+    vendor: internal_price_api
+    cadence: 1min
+    schema_type: price
     
-    # Pagination config
-    enable_pagination: true           # Enable/disable pagination
-    max_pages: 10                     # Maximum pages to prevent infinite loops
-    max_total_records: 1000           # Maximum total records allowed
-    page_delay: 0.5                   # Delay between pages (seconds) for rate limiting
+    # Pagination config for Price
+    limit: 1000                     
+    enable_pagination: true         
+    max_pages: 500                  
+    max_total_records: 500000       
+    page_delay: 0.3                 
     
     # Retry config
     max_retries: 3
@@ -42,24 +33,26 @@ adapters:
     backoff_factor: 2.0
     timeout: 30
 
-  # Fundamental Data Adapter (disabled example)
-  # - id: fundamental_fmp_001
-  #   type: fundamental
-  #   vendor: fmp
-  #   cadence: daily
-  #   schema_type: fundamental
+  # News Data Adapter
+  - id: "news_internal_001"
+    type: "news"
+    vendor: "internal_news_api"
+    cadence: "5min"
+    schema_type: "news"
+    
+    # Pagination config for News
+    limit: 100                       
+    enable_pagination: true           
+    max_pages: 200                    
+    max_total_records: 20000           
+    page_delay: 0.5                  
+    
+    # Retry config
+    max_retries: 3
+    retry_delay: 2.0
+    backoff_factor: 2.0
+    timeout: 30
 
 # Quality Assurance Configuration
 quality:
   quality_threshold: 0.80
-  validation_rules:
-    price:
-      - no_nan_values
-      - volume_consistency
-    news:
-      - content_quality
-      # - no_duplicates
-      # - symbol_mapping
-    fundamental:
-      - no_nan_values
-      - metric_consistency

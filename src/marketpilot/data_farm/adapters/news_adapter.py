@@ -76,8 +76,8 @@ class ResilientNewsAdapter(BaseAdapter):
 
         params = {
             "asset_slug": asset_slug,
-            "from_date": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "to_date": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "end": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "limit": limit,
             "sort_by": "releasedAt",
             "order": "desc",
@@ -116,21 +116,13 @@ class ResilientNewsAdapter(BaseAdapter):
             assets = article.get("assets", [])
             primary_symbol = assets[0].get("symbol") if assets else symbol
 
-            published_at = article.get("releasedAt") or article.get("published_at")
-            
-            if published_at:
-                try:
-                    article_time = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-                    if most_recent_time is None or article_time > most_recent_time:
-                        most_recent_time = article_time
-                except (ValueError, AttributeError):
-                    pass
+            releasedAt = article.get("releasedAt") 
 
             transformed_items.append({
                 "news_id": article.get("slug", ""),
                 "symbol": symbol,
                 "primary_symbol": primary_symbol,
-                "published_at_utc": published_at,
+                "releasedAt": releasedAt,
                 "title": article.get("title", ""),
                 "subtitle": article.get("subtitle", ""),
                 "source": article.get("source", ""),
@@ -225,7 +217,8 @@ class ResilientNewsAdapter(BaseAdapter):
             url = self._build_api_url(
                 asset_slug, start, end, self.default_limit, current_cursor
             )
-            
+            print("--------news url")
+            print(url)
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
