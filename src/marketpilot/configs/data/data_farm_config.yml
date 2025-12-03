@@ -29,6 +29,19 @@ adapters:
     cadence: "5min"
     schema_type: "news"
     limit: 100
+    
+    # Pagination config (NEW)
+    enable_pagination: true           # فعال/غیرفعال کردن pagination
+    max_pages: 10                     # حداکثر تعداد صفحات (برای جلوگیری از infinite loop)
+    max_total_records: 1000           # حداکثر تعداد کل رکوردها
+    page_delay: 0.5                   # تاخیر بین صفحات (ثانیه) - برای rate limiting
+    
+    # Retry config
+    max_retries: 3
+    retry_delay: 2.0
+    backoff_factor: 2.0
+    timeout: 30
+
 
   # Fundamental Data Adapter (commented out - no real API yet)
   # - id: fundamental_fmp_001
