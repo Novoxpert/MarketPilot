@@ -3,9 +3,9 @@ logging:
   level: INFO
 
 output:
-  base_dir: data  # Dynamic from config
-  formats: ["parquet"]          # Can be ["parquet", "json"]
-  compression: snappy           # snappy, gzip, etc.
+  base_dir: data               # Dynamic from config
+  formats: ["parquet"]         # Options: ["parquet", "json"]
+  compression: snappy          # snappy, gzip, etc.
 
 # Target symbols
 target_symbols:
@@ -13,14 +13,14 @@ target_symbols:
   - "BINANCE:ETHUSDT.P"
 
 adapters:
-  # Price Data Adapter
-  # - id: price_internal_001       # Used in data_collection
+  # Price Data Adapter (disabled example)
+  # - id: price_internal_001
   #   type: price
-  #   vendor: internal_price_api   # Used in data_collection
+  #   vendor: internal_price_api
   #   cadence: 1min
   #   schema_type: price
-    # start: optional datetime     # Can be provided dynamically at runtime
-    # end: optional datetime       # Can be provided dynamically at runtime
+  #   start: optional datetime
+  #   end: optional datetime
 
   # News Data Adapter
   - id: "news_internal_001"
@@ -30,11 +30,11 @@ adapters:
     schema_type: "news"
     limit: 100
     
-    # Pagination config (NEW)
-    enable_pagination: true           # فعال/غیرفعال کردن pagination
-    max_pages: 10                     # حداکثر تعداد صفحات (برای جلوگیری از infinite loop)
-    max_total_records: 1000           # حداکثر تعداد کل رکوردها
-    page_delay: 0.5                   # تاخیر بین صفحات (ثانیه) - برای rate limiting
+    # Pagination config
+    enable_pagination: true           # Enable/disable pagination
+    max_pages: 10                     # Maximum pages to prevent infinite loops
+    max_total_records: 1000           # Maximum total records allowed
+    page_delay: 0.5                   # Delay between pages (seconds) for rate limiting
     
     # Retry config
     max_retries: 3
@@ -42,8 +42,7 @@ adapters:
     backoff_factor: 2.0
     timeout: 30
 
-
-  # Fundamental Data Adapter (commented out - no real API yet)
+  # Fundamental Data Adapter (disabled example)
   # - id: fundamental_fmp_001
   #   type: fundamental
   #   vendor: fmp
@@ -52,15 +51,15 @@ adapters:
 
 # Quality Assurance Configuration
 quality:
-  quality_threshold: 0.80        # Slightly lower for testing with real data
+  quality_threshold: 0.80
   validation_rules:
     price:
       - no_nan_values
       - volume_consistency
     news:
-      - content_quality          # Checks for title/subtitle/content
-      # - no_duplicates          # Can be enabled later
-      # - symbol_mapping         # Automatically handled by adapter
+      - content_quality
+      # - no_duplicates
+      # - symbol_mapping
     fundamental:
       - no_nan_values
       - metric_consistency
