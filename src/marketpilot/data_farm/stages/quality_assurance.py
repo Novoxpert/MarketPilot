@@ -96,7 +96,7 @@ class QualityAssuranceStage(BaseStage):
         
         # Check 3: Has timestamp
         timestamp_fields = [
-            "timestamp", "candle_time", "published_at_utc", "date_utc", "date"
+            "timestamp", "candle_time", "releasedAt", "date_utc", "date"
         ]
         has_timestamp = any(
             field in record_data and record_data[field]

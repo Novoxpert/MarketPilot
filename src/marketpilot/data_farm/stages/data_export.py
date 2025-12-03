@@ -34,7 +34,7 @@ class DataExportStage(BaseStage):
 
         # Get config
         config = data.get("config", {})
-        base_dir = Path(config.get("output", {}).get("base_dir", "data_farm_exports"))
+        base_dir = Path(config.get("output", {}).get("base_dir", "data"))
         base_dir.mkdir(parents=True, exist_ok=True)
 
         # Group by symbol and type
@@ -173,8 +173,7 @@ class DataExportStage(BaseStage):
 
             # Convert Unix timestamps (ms) to pandas datetime
             timestamp_cols = [
-                "timestamp", "candle_time", "published_at_utc",
-                "date_utc", "ingested_at"
+                "timestamp","date_utc", "ingested_at"
             ]
             
             for col in timestamp_cols:

@@ -85,7 +85,7 @@ class DeduplicationStage(BaseStage):
         if timestamp == "no_timestamp":
             timestamp = (
                 record_data.get("candle_time")
-                or record_data.get("published_at_utc")
+                or record_data.get("releasedAt")
                 or record_data.get("date_utc")
                 or "no_timestamp"
             )

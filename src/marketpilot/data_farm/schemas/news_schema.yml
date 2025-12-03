@@ -19,7 +19,7 @@ data_item_structure:
   - news_id: string
   - symbol: string
   - primary_symbol: string
-  - published_at_utc: datetime
+  - releasedAt: datetime
   - title: string
   - subtitle: string
   - source: string
