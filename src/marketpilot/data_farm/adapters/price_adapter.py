@@ -28,9 +28,9 @@ class ResilientPriceAdapter(BaseAdapter):
         # Pagination configuration
         self.default_limit = config.get("limit", 1000)
         self.enable_pagination = config.get("enable_pagination", True)
-        self.max_pages = config.get("max_pages", 100)  
-        self.max_total_records = config.get("max_total_records", 100000)  
-        self.page_delay = config.get("page_delay", 0.3)  
+        self.max_pages = config.get("max_pages", 100)
+        self.max_total_records = config.get("max_total_records", 100000)
+        self.page_delay = config.get("page_delay", 0.3)
 
         self.retry_handler = create_retry_handler(
             adapter_id=self.adapter_id,
@@ -44,13 +44,12 @@ class ResilientPriceAdapter(BaseAdapter):
             stage="initialization",
             block=self.adapter_id,
             level="INFO",
-            msg="Price adapter initialized with pagination support",
+            msg="Price adapter initialized with self-calculated offset",
             extra={
                 "base_url": self.api_base_url,
                 "limit": self.default_limit,
                 "pagination_enabled": self.enable_pagination,
                 "max_pages": self.max_pages,
-                "max_total_records": self.max_total_records,
             },
         )
 
@@ -60,11 +59,9 @@ class ResilientPriceAdapter(BaseAdapter):
         start: Optional[datetime],
         end: Optional[datetime],
         limit: int = 1000,
-        cursor: Optional[str] = None,
+        offset: int = 0,
     ) -> str:
-        """
-        Build API URL with cursor-based pagination
-        """
+        """Build API URL with offset pagination"""
         if start is None or end is None:
             end = datetime.utcnow()
             start = end - timedelta(minutes=1)
@@ -74,10 +71,8 @@ class ResilientPriceAdapter(BaseAdapter):
             "start": start.strftime("%Y%m%d-%H%M"),
             "end": end.strftime("%Y%m%d-%H%M"),
             "limit": limit,
+            "offset": offset,
         }
-        
-        if cursor:
-            params["cursor"] = cursor
         
         return f"{self.api_base_url}?{urlencode(params)}"
 
@@ -120,20 +115,79 @@ class ResilientPriceAdapter(BaseAdapter):
         
         return transformed
 
+    def _should_continue_pagination(
+        self,
+        api_response: Dict[str, Any],
+        records_count: int,
+        current_offset: int,
+        total_fetched: int,
+    ) -> bool:
+        """
+        Determine if pagination should continue based on:
+        1. API metadata (if available)
+        2. Number of records returned
+        3. Total vs offset position
+        """
+        pagination = api_response.get("pagination") or api_response.get("metadata", {})
+        
+        if "has_more" in pagination:
+            has_more = pagination["has_more"]
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="DEBUG",
+                msg=f"API says has_more={has_more}",
+            )
+            return has_more
+        
+        if "has_next" in pagination:
+            has_next = pagination["has_next"]
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="DEBUG",
+                msg=f"API says has_next={has_next}",
+            )
+            return has_next
+        
+        total = pagination.get("total", 0)
+        if total > 0:
+            has_more = (current_offset + records_count) < total
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="DEBUG",
+                msg=f"Checking total: {current_offset + records_count} < {total} = {has_more}",
+            )
+            return has_more
+        
+        limit = pagination.get("limit", self.default_limit)
+        if records_count < limit:
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="INFO",
+                msg=f"Partial page received ({records_count} < {limit}) - end of data",
+            )
+            return False
+
+        log_event(
+            stage="ingestion",
+            block=self.adapter_id,
+            level="INFO",
+            msg=f"Full page received ({records_count} = {limit}) - continuing",
+        )
+        return True
+
     async def _fetch_all_pages(
         self,
         symbol: str,
         start: datetime,
         end: datetime,
     ) -> Dict[str, Any]:
-        """
-        Fetch all pages of price data with cursor-based pagination
-        
-        Returns:
-            Dict with combined records and pagination stats
-        """
+        """Fetch all pages with self-calculated offset"""
         all_records = []
-        current_cursor = None
+        current_offset = 0  
         page_count = 0
         total_fetched = 0
         
@@ -142,7 +196,7 @@ class ResilientPriceAdapter(BaseAdapter):
             "total_records": 0,
             "truncated": False,
             "truncation_reason": None,
-            "pagination_method": "cursor",
+            "pagination_method": "self_calculated_offset",
         }
 
         while True:
@@ -154,15 +208,11 @@ class ResilientPriceAdapter(BaseAdapter):
                     stage="ingestion",
                     block=self.adapter_id,
                     level="WARNING",
-                    msg=f"Reached max_pages limit ({self.max_pages})",
-                    extra={
-                        "symbol": symbol,
-                        "records_fetched": total_fetched,
-                        "pages_fetched": page_count - 1,
-                    },
+                    msg=f" Reached max_pages limit ({self.max_pages})",
+                    extra={"symbol": symbol, "records_fetched": total_fetched},
                 )
                 pagination_stats["truncated"] = True
-                pagination_stats["truncation_reason"] = f"max_pages_limit_{self.max_pages}"
+                pagination_stats["truncation_reason"] = f"max_pages_{self.max_pages}"
                 break
 
             if total_fetched >= self.max_total_records:
@@ -171,33 +221,32 @@ class ResilientPriceAdapter(BaseAdapter):
                     block=self.adapter_id,
                     level="WARNING",
                     msg=f"Reached max_total_records limit ({self.max_total_records})",
-                    extra={
-                        "symbol": symbol,
-                        "records_fetched": total_fetched,
-                    },
+                    extra={"symbol": symbol, "records_fetched": total_fetched},
                 )
                 pagination_stats["truncated"] = True
-                pagination_stats["truncation_reason"] = f"max_records_limit_{self.max_total_records}"
+                pagination_stats["truncation_reason"] = f"max_records_{self.max_total_records}"
                 break
 
-            # Build URL
             url = self._build_api_url(
-                symbol, start, end, 
-                self.default_limit, 
-                current_cursor
+                symbol=symbol,
+                start=start,
+                end=end,
+                limit=self.default_limit,
+                offset=current_offset,
             )
+            
             print("-------price url")
             print(url)
-            
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
-                level="DEBUG",
+                level="INFO",
                 msg=f"Fetching page {page_count}",
                 extra={
                     "symbol": symbol,
                     "page": page_count,
-                    "cursor": current_cursor[:30] + "..." if current_cursor else None,
+                    "offset": current_offset,
+                    "limit": self.default_limit,
                     "total_so_far": total_fetched,
                 },
             )
@@ -213,11 +262,7 @@ class ResilientPriceAdapter(BaseAdapter):
 
             # Handle failure
             if status_code != 200 or api_response is None:
-                error_msg = (
-                    f"API returned status {status_code}"
-                    if status_code > 0
-                    else "Request failed after retries"
-                )
+                error_msg = f"API returned status {status_code}" if status_code > 0 else "Request failed"
                 log_event(
                     stage="ingestion",
                     block=self.adapter_id,
@@ -230,7 +275,7 @@ class ResilientPriceAdapter(BaseAdapter):
                     return {"error": error_msg, "status_code": status_code}
                 else:
                     pagination_stats["truncated"] = True
-                    pagination_stats["truncation_reason"] = f"error_at_page_{page_count}"
+                    pagination_stats["truncation_reason"] = f"error_page_{page_count}"
                     break
 
             # Check API success
@@ -245,38 +290,50 @@ class ResilientPriceAdapter(BaseAdapter):
 
             # Extract data
             page_data = api_response.get("data", [])
-            pagination = api_response.get("pagination", {})
+            page_records = len(page_data)
+            
+            if page_records == 0:
+                log_event(
+                    stage="ingestion",
+                    block=self.adapter_id,
+                    level="INFO",
+                    msg="✓ Empty page received - end of data",
+                    extra={"page": page_count, "total_fetched": total_fetched},
+                )
+                break
             
             # Append data
             all_records.extend(page_data)
-            page_records = len(page_data)
             total_fetched += page_records
             
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
                 level="INFO",
-                msg=f"Page {page_count} fetched: {page_records} records (total: {total_fetched})",
+                msg=f"✓ Page {page_count}: {page_records} records (total: {total_fetched:,})",
                 extra={
                     "symbol": symbol,
                     "page": page_count,
                     "records_in_page": page_records,
                     "total_so_far": total_fetched,
+                    "current_offset": current_offset,
                 },
             )
 
-            # Check if pagination continues
-            has_next_cursor = pagination.get("has_next", False) and pagination.get("next_cursor")
+            # Check if we should continue
+            should_continue = self._should_continue_pagination(
+                api_response,
+                page_records,
+                current_offset,
+                total_fetched,
+            )
             
-            if has_next_cursor:
-                current_cursor = pagination.get("next_cursor")
-            else:
-                # No more data
+            if not should_continue:
                 log_event(
                     stage="ingestion",
                     block=self.adapter_id,
                     level="INFO",
-                    msg=f"Reached end of data",
+                    msg="✓ Reached end of data",
                     extra={
                         "symbol": symbol,
                         "total_pages": page_count,
@@ -284,12 +341,34 @@ class ResilientPriceAdapter(BaseAdapter):
                     },
                 )
                 break
+            
+            current_offset += page_records
+            
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="DEBUG",
+                msg=f"Next offset calculated: {current_offset}",
+                extra={
+                    "previous_offset": current_offset - page_records,
+                    "records_added": page_records,
+                    "next_offset": current_offset,
+                },
+            )
 
         # Final stats
         pagination_stats["total_pages_fetched"] = page_count
         pagination_stats["total_records"] = total_fetched
         pagination_stats["avg_records_per_page"] = (
             round(total_fetched / page_count, 2) if page_count > 0 else 0
+        )
+
+        log_event(
+            stage="ingestion",
+            block=self.adapter_id,
+            level="INFO",
+            msg=f"Pagination complete: {total_fetched:,} records in {page_count} pages",
+            extra=pagination_stats,
         )
 
         return {
@@ -304,7 +383,6 @@ class ResilientPriceAdapter(BaseAdapter):
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """Execute price data ingestion with pagination support"""
-        # Prevent concurrent fetches for same symbol
         if symbol not in self._fetch_locks:
             self._fetch_locks[symbol] = asyncio.Lock()
         
@@ -328,16 +406,13 @@ class ResilientPriceAdapter(BaseAdapter):
                     "symbol": symbol,
                     "start": start.isoformat() if start else None,
                     "end": end.isoformat() if end else None,
-                    "pagination_enabled": self.enable_pagination,
                 },
             )
 
-            # Fetch with or without pagination
             if self.enable_pagination:
                 fetch_result = await self._fetch_all_pages(symbol, start, end)
             else:
-                # Legacy method: single request
-                url = self._build_api_url(symbol, start, end, self.default_limit)
+                url = self._build_api_url(symbol, start, end, self.default_limit, 0)
                 status_code, api_response = await self.retry_handler.fetch_with_retry(
                     url=url, symbol=symbol, method="GET"
                 )
@@ -353,13 +428,12 @@ class ResilientPriceAdapter(BaseAdapter):
                 if not api_response.get("success", False):
                     return {
                         "success": False,
-                        "error": api_response.get("error", "API returned success=false"),
+                        "error": api_response.get("error", "Unknown error"),
                         "vendor": self.vendor,
                         "adapter_id": self.adapter_id,
                     }
                 
                 page_data = api_response.get("data", [])
-                
                 fetch_result = {
                     "records": page_data,
                     "pagination_stats": {
@@ -370,7 +444,6 @@ class ResilientPriceAdapter(BaseAdapter):
                     }
                 }
 
-            # Check for errors
             if "error" in fetch_result:
                 return {
                     "success": False,
@@ -382,7 +455,6 @@ class ResilientPriceAdapter(BaseAdapter):
             data_records = fetch_result["records"]
             pagination_stats = fetch_result["pagination_stats"]
 
-            # Handle no data case
             if not data_records:
                 log_event(
                     stage="ingestion",
@@ -396,12 +468,9 @@ class ResilientPriceAdapter(BaseAdapter):
                     "vendor": self.vendor,
                     "adapter_id": self.adapter_id,
                     "record_count": 0,
-                    "metadata": {
-                        "pagination": pagination_stats,
-                    },
+                    "metadata": {"pagination": pagination_stats},
                 }
 
-            # Transform response
             transformed_data = self._transform_response(data_records, symbol)
             record_count = len(transformed_data)
 
@@ -409,12 +478,12 @@ class ResilientPriceAdapter(BaseAdapter):
                 stage="ingestion",
                 block=self.adapter_id,
                 level="INFO",
-                msg=f"Successfully ingested {record_count} price records",
+                msg=f"Successfully ingested {record_count:,} records in {pagination_stats['total_pages_fetched']} pages",
                 extra={
                     "symbol": symbol,
                     "record_count": record_count,
-                    "pages_fetched": pagination_stats["total_pages_fetched"],
-                    "pagination_method": pagination_stats["pagination_method"],
+                    "pages": pagination_stats["total_pages_fetched"],
+                    "avg_per_page": pagination_stats.get("avg_records_per_page", 0),
                     "truncated": pagination_stats.get("truncated", False),
                 },
             )
@@ -441,11 +510,8 @@ class ResilientPriceAdapter(BaseAdapter):
                 stage="ingestion",
                 block=self.adapter_id,
                 level="ERROR",
-                msg=error_msg,
-                extra={
-                    "symbol": symbol,
-                    "error_type": type(e).__name__,
-                },
+                msg=f"❌ {error_msg}",
+                extra={"symbol": symbol, "error_type": type(e).__name__},
             )
             return {
                 "success": False,

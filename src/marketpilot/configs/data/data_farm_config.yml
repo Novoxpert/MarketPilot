@@ -23,8 +23,8 @@ adapters:
     # Pagination config for Price
     limit: 1000                     
     enable_pagination: true         
-    max_pages: 500                  
-    max_total_records: 500000       
+    max_pages: 5000                  
+    max_total_records: 5000000       
     page_delay: 0.3                 
     
     # Retry config
