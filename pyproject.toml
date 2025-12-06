@@ -6,6 +6,7 @@ authors = ["Elham Nikbakht Bidgoli <nikbakht.enb4@gmail.com>"]
 readme = "README.md"
 packages = [
     { include = "marketpilot", from = "src" },
+    { include = "examples" },
 ]
 
 [tool.poetry.dependencies]
@@ -35,6 +36,9 @@ black = "^25.9.0"
 flake8 = "^7.3.0"
 pytest-asyncio = "^1.2.0"
 pre-commit = "^4.5.0"
+
+[tool.poetry.scripts]
+marketpilot = "marketpilot.cli.main:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

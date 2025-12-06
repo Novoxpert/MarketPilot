@@ -12,6 +12,7 @@ Features:
 - Rich-formatted output with colors, panels, and padding.
 - Supports commands for:
     • Running agents, tools, or workflows (`run-agent <name>`)
+    • Running data farm pipeline (`run-pipeline`)
     • Visualizing graph definitions (`visualize-graph <name>`)
     • Listing available agents, tools, and graphs (`list-targets`)
     • Displaying configuration (`show-config`)
@@ -30,6 +31,7 @@ Example session:
     λ help
     λ list-targets
     λ run-agent my_agent
+    λ run-pipeline
     λ visualize-graph sample_workflow
     λ exit
 
@@ -45,7 +47,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
 from rich.padding import Padding
-from marketpilot.cli.commands import run_target, visualize_graph, list_targets, config
+from marketpilot.cli.commands import run_target, visualize_graph, list_targets, config, run_pipeline
 
 console = Console()
 
@@ -65,13 +67,14 @@ def show_help():
         Padding(
             Panel.fit(
             """[bold yellow]Available Commands:[/bold yellow]
-  [cyan]run <target>/<name>[/cyan]     → Run an agent, tool, or graph workflow by specifying its name
-  [cyan]visualize-graph <name>[/cyan]  → Visualize a graph / workflow definition
-  [cyan]list-targets[/cyan]            → List all available agents, tools, and graphs
-  [cyan]show-config[/cyan]             → Display current configuration
-  [cyan]clear[/cyan]                   → Clear the console
-  [cyan]help[/cyan]                    → Show this help menu
-  [cyan]exit[/cyan]                    → Quit the shell""",
+  [cyan]run <target>/<name>[/cyan] → Run an agent, tool, or graph workflow by specifying its name
+  [cyan]run-pipeline[/cyan]        → Run data farm pipeline with custom parameters
+  [cyan]visualize-graph <name>[/cyan] → Visualize a graph / workflow definition
+  [cyan]list-targets[/cyan]        → List all available agents, tools, and graphs
+  [cyan]show-config[/cyan]         → Display current configuration
+  [cyan]clear[/cyan]               → Clear the console
+  [cyan]help[/cyan]                → Show this help menu
+  [cyan]exit[/cyan]                → Quit the shell""",
             border_style="yellow",
         ), (0, 0, 1, 0)
         )
@@ -99,6 +102,9 @@ def main():
 
             elif command == "clear":
                 console.clear()
+
+            elif command == "run-pipeline":
+                run_pipeline.main()
 
             elif command.startswith("run"):
                 parts = command.split()
