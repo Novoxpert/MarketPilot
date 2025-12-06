@@ -60,7 +60,7 @@ async def main():
     
     # Define optional date range for testing
     start_date = datetime.strptime("2025-11-27 07:08", "%Y-%m-%d %H:%M")
-    end_date = datetime.strptime("2025-12-01 07:09", "%Y-%m-%d %H:%M")
+    end_date = datetime.strptime("2025-12-01 13:09", "%Y-%m-%d %H:%M")
     
     print(f"   Test Symbol: {test_symbols[0]}")
     print(f"   Start: {start_date.isoformat() if start_date else 'Not specified'}")
