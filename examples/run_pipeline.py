@@ -55,7 +55,7 @@ async def main():
     
     # Define optional date range
     start_date = datetime.strptime("2025-11-01 07:08", "%Y-%m-%d %H:%M")
-    end_date = datetime.strptime("2025-12-01 07:09", "%Y-%m-%d %H:%M")
+    end_date = datetime.strptime("2025-11-03 10:09", "%Y-%m-%d %H:%M")
     
     # Or use None for default ranges
     # start_date = None
