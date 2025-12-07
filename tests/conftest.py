@@ -24,7 +24,7 @@ def pytest_configure(config):
     assert manager.is_test_mode, "Test mode not activated!"
     
     print("\n" + "="*60)
-    print("🧪 Test Mode Activated")
+    print(" Test Mode Activated")
     print("="*60)
     print(f"Log Directory: {manager.get_log_dir()}")
     print(f"Data Directory: {manager.get_data_dir()}")
@@ -38,15 +38,15 @@ def pytest_configure(config):
 #     manager = get_mode_manager()
     
 #     print("\n" + "="*60)
-#     print("🧹 Cleaning up test data...")
+#     print(" Cleaning up test data...")
 #     print("="*60)
     
 #     try:
 #         # Cleanup test data
 #         manager.cleanup_test_data()
-#         print("✅ Test data cleaned successfully")
+#         print(" Test data cleaned successfully")
 #     except Exception as e:
-#         print(f"⚠️  Cleanup warning: {e}")
+#         print(f"  Cleanup warning: {e}")
     
 #     print("="*60 + "\n")
 

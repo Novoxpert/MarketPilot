@@ -234,7 +234,7 @@ if __name__ == "__main__":
     setup_logging("INFO")
 
     # Simulate adapter logs from config
-    print("\n📊 Simulating logs from data_farm_config.yml adapters:")
+    print("\n Simulating logs from data_farm_config.yml adapters:")
     # Adapter 1: price_internal_001
     log_event(
         "data_collection",
@@ -278,16 +278,16 @@ if __name__ == "__main__":
     )
 
     print("\n" + "=" * 60)
-    print("📁 Log Files Created (Dynamic):")
+    print(" Log Files Created (Dynamic):")
     print("=" * 60)
 
     for category, files in get_log_files().items():
         if files:
             print(f"\n  {category}/:")
             for f in files:
-                print(f"    ✅ {f}")
+                print(f"     {f}")
 
     print("\n" + "=" * 60)
-    print("🔍 Reading Adapter Logs:")
+    print(" Reading Adapter Logs:")
     print("=" * 60)
 

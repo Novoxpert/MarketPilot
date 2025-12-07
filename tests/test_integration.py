@@ -30,9 +30,9 @@ def setup_test_mode():
     # Cleanup after all tests
     try:
         manager.cleanup_test_data()
-        print("\n✅ Test data cleaned up successfully")
+        print("\n Test data cleaned up successfully")
     except Exception as e:
-        print(f"\n⚠️ Cleanup warning: {e}")
+        print(f"\n Cleanup warning: {e}")
 
 
 # ========================================
