@@ -510,7 +510,7 @@ class ResilientPriceAdapter(BaseAdapter):
                 stage="ingestion",
                 block=self.adapter_id,
                 level="ERROR",
-                msg=f"❌ {error_msg}",
+                msg=f" {error_msg}",
                 extra={"symbol": symbol, "error_type": type(e).__name__},
             )
             return {
