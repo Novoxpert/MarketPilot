@@ -1,260 +1,237 @@
-poetry run python scripts/run_data_farm.py
-poetry run pytest tests/test_simple_stages.py -v
-# Market Pilot Unit Tests
+# 📋 Comprehensive Test Guide - With Mode Manager
 
-## Overview
-Comprehensive unit test suite for Market Pilot Data Farm covering adapters, stages, and complete pipeline integration.
+## 🎯 Key Features
 
-## Test Coverage Goal
-**Target: ≥80% code coverage**
+✅ **Test Mode Isolation**: Logs in `logs_test/` and data in `data_test/`  
+✅ **Mode Manager Integration**: Full integration with mode system  
+✅ **Comprehensive Coverage**: Complete coverage of adapters, stages, and integration  
 
-## Test Structure
+---
+
+## 📁 Test Structure
 
 ```
 tests/
-├── conftest.py              # Pytest configuration & fixtures
-├── test_adapters.py         # Adapter unit tests
-├── test_stages.py          # Stage unit tests
-├── test_integration.py     # Integration tests
-└── README_TESTS.md         # This file
+├── conftest.py              # Shared configuration (with Mode Manager)
+├── test_adapters.py         # Adapter tests
+├── test_stages.py           # Pipeline stage tests
+└── test_integration.py      # Integration tests
 ```
 
-## Running Tests
-### Run all tests with coverage
+### Folder Structure During Tests
+
+```
+project/
+├── logs_test/               # Test logs (isolated)
+│   ├── pipeline/
+│   ├── stages/
+│   ├── adapters/
+│   └── errors/
+├── data_test/               # Test data (isolated)
+│   ├── BINANCE_BTCUSDT_P/
+│   └── __meta__/
+└── logs/                    # Normal logs (untouched)
+    └── data/                # Normal data (untouched)
+```
+
+---
+
+
+## ▶️ Running Tests
+
+### Run All Tests
 ```bash
-pytest tests/ \
-    --cov=marketpilot \
-    --cov-report=term-missing \
-    --cov-report=html:htmlcov \
-    --cov-fail-under=80 \
-    -v \
-    --tb=short
+pytest
 ```
-### Manual Execution
+
+**Result:**
+- ✅ Test mode activated
+- ✅ Logs saved to `logs_test/`
+- ✅ Data saved to `data_test/`
+
+### Run Specific File
 ```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=marketpilot --cov-report=html
-
-# Run specific test file
-pytest tests/test_adapters.py -v
-
-# Run specific test
-pytest tests/test_adapters.py::TestResilientPriceAdapter::test_price_adapter_ingest_success -v
+pytest tests/test_adapters.py
 ```
 
-### Test Categories
+### Run Specific Test
 ```bash
-# Run only unit tests
-pytest tests/ -m unit
-
-# Run only integration tests
-pytest tests/ -m integration
-
-# Run smoke tests
-pytest tests/ -m smoke
+pytest tests/test_adapters.py::test_price_adapter_initialization
 ```
 
-## Test Files Description
-
-### `test_adapters.py`
-Tests for data adapters:
-- ✅ Adapter initialization
-- ✅ Successful data ingestion
-- ✅ Schema validation
-- ✅ Numeric value validation
-- ✅ Error handling
-
-**Classes:**
-- `TestResilientPriceAdapter`
-- `TestResilientNewsAdapter`
-- `TestResilientFundamentalAdapter`
-
-### `test_stages.py`
-Tests for pipeline stages:
-- ✅ Health Check Stage
-- ✅ Data Collection Stage
-- ✅ NaN Processing Stage
-- ✅ Temporal Alignment Stage
-- ✅ Deduplication Stage
-- ✅ Quality Assurance Stage
-- ✅ Data Export Stage
-
-**Classes:**
-- `TestHealthCheckStage`
-- `TestNaNProcessingStage`
-- `TestTemporalAlignmentStage`
-- `TestDeduplicationStage`
-- `TestQualityAssuranceStage`
-- `TestDataExportStage`
-
-### `test_integration.py`
-End-to-end integration tests:
-- ✅ Complete pipeline execution
-- ✅ Multi-symbol processing
-- ✅ QA statistics validation
-- ✅ Export functionality
-- ✅ Error handling
-- ✅ Logging integration
-
-**Classes:**
-- `TestPipelineIntegration`
-- `TestDataFarmConfiguration`
-- `TestErrorHandling`
-- `TestLoggingIntegration`
-
-## Test Mode Features
-
-All tests automatically run in **test mode** via `conftest.py`:
-- 🔧 Logs written to `logs_test/` directory
-- 🔧 Test data isolated from production
-- 🔧 Automatic cleanup after tests
-
-## Key Test Scenarios
-
-### Adapter Tests
-```python
-# Test successful ingestion
-result = await adapter.execute_ingest("AAPL")
-assert result["success"] is True
-
-# Test schema validation
-data = result["data"]
-assert "timestamp" in data
-assert "open" in data
-```
-
-### Stage Tests
-```python
-# Test NaN processing
-data_with_nans = {"raw_data": [...]}
-result = await nan_stage.execute(data_with_nans)
-assert result["nan_stats"]["nan_count"] == 2
-
-# Test deduplication
-data_with_dupes = {"aligned_data": [...]}
-result = await dedup_stage.execute(data_with_dupes)
-assert result["dedup_stats"]["duplicates_removed"] == 1
-```
-
-### Integration Tests
-```python
-# Test complete pipeline
-farm = ResilientDataFarm()
-result = await farm.run_complete_pipeline(["AAPL", "GOOGL"])
-assert "validated_data" in result
-assert result["validation_report"]["validation_passed"]
-```
-
-## Coverage Report
-
-After running tests, view coverage in browser:
+### Run with Coverage
 ```bash
-# Mac
-open htmlcov/index.html
-
-# Linux
-xdg-open htmlcov/index.html
-
-# Windows
-start htmlcov/index.html
+pytest --cov=marketpilot --cov-report=html
 ```
 
-## Fixtures Available
+---
 
-Common fixtures defined in `conftest.py`:
-- `sample_adapters` - Mock adapter data
-- `sample_symbols` - Test symbols (AAPL, GOOGL, MSFT)
-- `sample_price_data` - Mock price records
+## 🏷️ Using Markers
 
-## Mocking External APIs
+### Filter by Type
+```bash
+# Only unit tests
+pytest -m unit
 
-Tests use mock data instead of real API calls:
-```python
-# Adapters return mock data
-mock_data = {
-    "symbol": "AAPL",
-    "timestamp": "2024-01-01T00:00:00",
-    "open": 150.0,
-    "close": 152.0
+# Only integration tests
+pytest -m integration
+
+# Only adapter tests
+pytest -m adapter
+
+# Only stage tests
+pytest -m stage
+
+# Only pipeline tests
+pytest -m pipeline
+
+# Only smoke tests
+pytest -m smoke
+```
+
+---
+
+
+## 🔍 Inspecting Test Logs
+
+### During Test Execution
+
+```bash
+# Run tests without cleanup (for debugging)
+pytest --no-cov -v
+
+# Check logs (before test completion)
+cat logs_test/pipeline/current.jsonl
+cat logs_test/adapters/test_price_adapter.jsonl
+cat logs_test/stages/data_collection.jsonl
+cat logs_test/errors/current.jsonl
+```
+
+### Log Structure
+
+```json
+{
+  "timestamp": "2025-12-07T10:30:00.000Z",
+  "stage": "data_collection",
+  "block": "test_price_adapter",
+  "level": "INFO",
+  "message": "Fetched 100 records",
+  "test_mode": true,
+  "symbol": "BINANCE:BTCUSDT.P"
 }
 ```
 
-## Troubleshooting
+---
 
-### Import Errors
+## ✅ Test Checklist
+
+### Unit Tests (Fast)
+- ✅ `test_price_adapter_initialization`
+- ✅ `test_price_adapter_transform_response`
+- ✅ `test_news_adapter_initialization`
+- ✅ `test_news_adapter_transform_response`
+- ✅ `test_fundamental_adapter_initialization`
+- ✅ `test_nan_processing_basic`
+- ✅ `test_temporal_alignment_iso_string`
+- ✅ `test_deduplication_removes_duplicates`
+- ✅ `test_qa_pass`
+
+### Integration Tests (Slower)
+- ✅ `test_data_farm_initialization`
+- ✅ `test_smoke_test_basic`
+- ✅ `test_complete_pipeline_with_mock`
+- ✅ `test_pipeline_handles_adapter_failure`
+- ✅ `test_logs_created_in_test_directory`
+
+---
+
+## 🎯 Coverage Goals
+
+| Component | Target Coverage | Status |
+|-----------|----------------|--------|
+| Adapters | ≥ 80% | ✅ |
+| Stages | ≥ 85% | ✅ |
+| Utils | ≥ 75% | ✅ |
+| Overall | ≥ 80% | ✅ |
+
 ```bash
-# Ensure correct PYTHONPATH
-export PYTHONPATH="${PYTHONPATH}:src"
-
-# Or use pytest.ini configuration
-```
-
-### Async Test Errors
-```bash
-# Install pytest-asyncio
-pip install pytest-asyncio
-
-# Ensure asyncio_mode = auto in pytest.ini
-```
-
-### Coverage Too Low
-```bash
-# View detailed coverage
+# Check coverage
 pytest --cov=marketpilot --cov-report=term-missing
-
-# Check which files need more tests
 ```
 
-## CI Integration
 
-Tests run automatically in CI pipeline (see `.github/workflows/ci.yml`):
-- ✅ Linting with flake8
-- ✅ Formatting check with black
-- ✅ Unit tests with pytest
-- ✅ Coverage report generation
+## ✨ Best Practices
 
-## Best Practices
+### 1. Always Use Test Mode
+```python
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_mode():
+    set_test_mode()
+    yield
+```
 
-1. **Test Naming**: Use descriptive names
-   ```python
-   def test_adapter_handles_missing_data_gracefully()
-   ```
+### 2. Verify Test Isolation
+```python
+def test_isolation():
+    """Tests should not affect logs/ and data/"""
+    manager = get_mode_manager()
+    assert manager.is_test_mode
+    assert not Path("logs/test_artifacts").exists()
+```
 
-2. **Arrange-Act-Assert**: Follow AAA pattern
-   ```python
-   # Arrange
-   adapter = ResilientPriceAdapter(config)
+### 3. Use Fixtures for Mocks
+```python
+@pytest.fixture
+def mock_adapter(mock_env_vars):
+    with patch.dict('os.environ', mock_env_vars):
+        yield create_adapter()
+```
 
-   # Act
-   result = await adapter.execute_ingest("AAPL")
+### 4. Cleanup in Teardown
+```python
+@pytest.fixture
+def temp_data():
+    # Setup
+    data = create_temp_data()
+    yield data
+    # Teardown
+    cleanup_temp_data(data)
+```
 
-   # Assert
-   assert result["success"] is True
-   ```
+---
 
-3. **Use Fixtures**: Reuse common test data
-   ```python
-   @pytest.fixture
-   def sample_config():
-       return {"vendor": "yfinance", ...}
-   ```
-# in run_data_farm_complete.py - lines 207-208
+## 🎉 Quick Commands Summary
 
-# Test 1: Last 1 hour
-START_DATE = END_DATE - timedelta(hours=1)
+```bash
+# Quick run
+pytest -v
 
-# Test 2: Last 7 days
-START_DATE = END_DATE - timedelta(days=7)
+# With coverage
+pytest --cov=marketpilot --cov-report=html
 
-# Test 3: Specific range
+# Only unit tests
+pytest -m unit
+
+# Only integration tests
+pytest -m integration
+
+```
+
+---
+
+
+## 📞 Support
+
+For issues or questions:
+1. Check logs_test/errors/current.jsonl
+2. Run with `pytest -vv --tb=long`
+3. Check conftest.py
+4. Check Mode Manager status
+
+---
 
 poetry run marketpilot
 
 poetry run python -m marketpilot.cli.main
-
-
 
 λ run-pipeline
