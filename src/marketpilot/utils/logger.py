@@ -42,7 +42,7 @@ def _ensure_base_structure():
     base = _get_log_base_dir()
 
     # Create only base directories (no files)
-    dirs = ["pipeline", "stages", "adapters", "errors"]
+    dirs = ["pipeline", "stages", "adapter", "errors"]
     for d in dirs:
         (base / d).mkdir(parents=True, exist_ok=True)
 
@@ -71,8 +71,8 @@ def _resolve_log_file(stage: str, block: str, level: str) -> Path:
     # If block name contains "adapter" or ends with "_adapter"
     if "adapter" in block.lower() or block.endswith("_adapter"):
         # Use block name as filename
-        # Example: "price_internal_001_adapter" -> adapters/price_internal_001_adapter.jsonl
-        return base / "adapters" / f"{block}.jsonl"
+        # Example: "price_internal_001_adapter" -> adapter/price_internal_001_adapter.jsonl
+        return base / "adapter" / f"{block}.jsonl"
 
     # ---- STAGES ----
     known_stage_names = [
