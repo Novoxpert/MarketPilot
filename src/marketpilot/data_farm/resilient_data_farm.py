@@ -114,7 +114,7 @@ class ResilientDataFarm:
         if not adapters_config:
             log_event(
                 stage="initialization",
-                block="adapters",
+                block="adapter",
                 level="WARNING",
                 msg="No adapters defined in configuration",
             )
@@ -135,7 +135,7 @@ class ResilientDataFarm:
             if not adapter_type or adapter_type not in adapter_classes:
                 log_event(
                     stage="initialization",
-                    block="adapters",
+                    block="adapter",
                     level="ERROR",
                     msg=f"Unknown adapter type: {adapter_type}",
                     extra={"adapter_id": adapter_id},
@@ -149,7 +149,7 @@ class ResilientDataFarm:
 
                 log_event(
                     stage="initialization",
-                    block="adapters",
+                    block="adapter",
                     level="INFO",
                     msg=f"Loaded adapter: {adapter_id}",
                     extra={
@@ -161,7 +161,7 @@ class ResilientDataFarm:
             except Exception as e:
                 log_event(
                     stage="initialization",
-                    block="adapters",
+                    block="adapter",
                     level="ERROR",
                     msg=f"Failed to load adapter: {str(e)}",
                     extra={"adapter_id": adapter_id, "error": str(e)},
@@ -169,7 +169,7 @@ class ResilientDataFarm:
 
         log_event(
             stage="initialization",
-            block="adapters",
+            block="adapter",
             level="INFO",
             msg="Adapter initialization complete",
             extra={"total_adapters": len(self.adapters)},

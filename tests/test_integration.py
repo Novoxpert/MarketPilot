@@ -28,11 +28,11 @@ def setup_test_mode():
     yield
     
     # Cleanup after all tests
-    try:
-        manager.cleanup_test_data()
-        print("\n Test data cleaned up successfully")
-    except Exception as e:
-        print(f"\n Cleanup warning: {e}")
+    # try:
+    #     manager.cleanup_test_data()
+    #     print("\n Test data cleaned up successfully")
+    # except Exception as e:
+    #     print(f"\n Cleanup warning: {e}")
 
 
 # ========================================
