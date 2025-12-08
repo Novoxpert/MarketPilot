@@ -13,7 +13,7 @@ from marketpilot.data_farm.utils.api_retry_handler import create_retry_handler
 
 
 class ResilientPriceAdapter(BaseAdapter):
-    """Price data adapter"""
+    """Price data adapter with offset-based pagination"""
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
@@ -32,6 +32,7 @@ class ResilientPriceAdapter(BaseAdapter):
         self.max_total_records = config.get("max_total_records", 100000)
         self.page_delay = config.get("page_delay", 0.3)
 
+        # Retry handler with centralized validation
         self.retry_handler = create_retry_handler(
             adapter_id=self.adapter_id,
             max_retries=config.get("max_retries", 3),
@@ -128,8 +129,10 @@ class ResilientPriceAdapter(BaseAdapter):
         2. Number of records returned
         3. Total vs offset position
         """
-        pagination = api_response.get("pagination") or api_response.get("metadata", {})
+        # Safely get pagination metadata
+        pagination = api_response.get("pagination") or api_response.get("metadata") or {}
         
+        # Check explicit has_more flag
         if "has_more" in pagination:
             has_more = pagination["has_more"]
             log_event(
@@ -140,6 +143,7 @@ class ResilientPriceAdapter(BaseAdapter):
             )
             return has_more
         
+        # Check has_next flag
         if "has_next" in pagination:
             has_next = pagination["has_next"]
             log_event(
@@ -150,6 +154,7 @@ class ResilientPriceAdapter(BaseAdapter):
             )
             return has_next
         
+        # Check total count
         total = pagination.get("total", 0)
         if total > 0:
             has_more = (current_offset + records_count) < total
@@ -161,6 +166,17 @@ class ResilientPriceAdapter(BaseAdapter):
             )
             return has_more
         
+        # If no records returned, stop pagination
+        if records_count == 0:
+            log_event(
+                stage="ingestion",
+                block=self.adapter_id,
+                level="INFO",
+                msg="No records in page - end of data",
+            )
+            return False
+        
+        # Check if partial page (less than limit)
         limit = pagination.get("limit", self.default_limit)
         if records_count < limit:
             log_event(
@@ -171,6 +187,7 @@ class ResilientPriceAdapter(BaseAdapter):
             )
             return False
 
+        # Full page received, assume more data exists
         log_event(
             stage="ingestion",
             block=self.adapter_id,
@@ -208,7 +225,7 @@ class ResilientPriceAdapter(BaseAdapter):
                     stage="ingestion",
                     block=self.adapter_id,
                     level="WARNING",
-                    msg=f" Reached max_pages limit ({self.max_pages})",
+                    msg=f"Reached max_pages limit ({self.max_pages})",
                     extra={"symbol": symbol, "records_fetched": total_fetched},
                 )
                 pagination_stats["truncated"] = True
@@ -240,7 +257,7 @@ class ResilientPriceAdapter(BaseAdapter):
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
-                level="INFO",
+                level="DEBUG",
                 msg=f"Fetching page {page_count}",
                 extra={
                     "symbol": symbol,
@@ -248,6 +265,7 @@ class ResilientPriceAdapter(BaseAdapter):
                     "offset": current_offset,
                     "limit": self.default_limit,
                     "total_so_far": total_fetched,
+                    "url": url,
                 },
             )
 
@@ -255,12 +273,12 @@ class ResilientPriceAdapter(BaseAdapter):
             if page_count > 1 and self.page_delay > 0:
                 await asyncio.sleep(self.page_delay)
 
-            # Fetch with retry
+            # Fetch with retry handler (automatic validation)
             status_code, api_response = await self.retry_handler.fetch_with_retry(
-                url=url, symbol=symbol, method="GET"
+                url=url, symbol=symbol, method="GET", validate=True
             )
 
-            # Handle failure
+            # Handle errors (validation already done by retry_handler)
             if status_code != 200 or api_response is None:
                 error_msg = f"API returned status {status_code}" if status_code > 0 else "Request failed"
                 log_event(
@@ -268,38 +286,43 @@ class ResilientPriceAdapter(BaseAdapter):
                     block=self.adapter_id,
                     level="ERROR",
                     msg=f"Failed at page {page_count}: {error_msg}",
-                    extra={"status": status_code, "page": page_count},
+                    extra={"status": status_code, "page": page_count, "symbol": symbol},
                 )
                 
+                # On first page failure, return error immediately
                 if page_count == 1:
                     return {"error": error_msg, "status_code": status_code}
-                else:
-                    pagination_stats["truncated"] = True
-                    pagination_stats["truncation_reason"] = f"error_page_{page_count}"
-                    break
+                
+                # On later pages, stop pagination but keep what we have
+                pagination_stats["truncated"] = True
+                pagination_stats["truncation_reason"] = f"error_page_{page_count}"
+                break
 
-            # Check API success
-            if not api_response.get("success", False):
-                error_msg = api_response.get("error", "API returned success=false")
-                if page_count == 1:
-                    return {"error": error_msg}
-                else:
-                    pagination_stats["truncated"] = True
-                    pagination_stats["truncation_reason"] = "api_error"
-                    break
-
-            # Extract data
+            # Extract data (guaranteed to have 'data' field due to validation)
             page_data = api_response.get("data", [])
             page_records = len(page_data)
             
+            # Empty data is valid - it means no more results
             if page_records == 0:
-                log_event(
-                    stage="ingestion",
-                    block=self.adapter_id,
-                    level="INFO",
-                    msg="✓ Empty page received - end of data",
-                    extra={"page": page_count, "total_fetched": total_fetched},
-                )
+                if page_count == 1:
+                    log_event(
+                        stage="ingestion",
+                        block=self.adapter_id,
+                        level="INFO",
+                        msg="No price data found for this time range",
+                        extra={
+                            "symbol": symbol,
+                            "time_range": f"{start.isoformat()} to {end.isoformat()}",
+                        },
+                    )
+                else:
+                    log_event(
+                        stage="ingestion",
+                        block=self.adapter_id,
+                        level="INFO",
+                        msg="Empty page received - end of data",
+                        extra={"page": page_count, "total_fetched": total_fetched},
+                    )
                 break
             
             # Append data
@@ -310,7 +333,7 @@ class ResilientPriceAdapter(BaseAdapter):
                 stage="ingestion",
                 block=self.adapter_id,
                 level="INFO",
-                msg=f"✓ Page {page_count}: {page_records} records (total: {total_fetched:,})",
+                msg=f"Page {page_count}: {page_records} records (total: {total_fetched:,})",
                 extra={
                     "symbol": symbol,
                     "page": page_count,
@@ -333,7 +356,7 @@ class ResilientPriceAdapter(BaseAdapter):
                     stage="ingestion",
                     block=self.adapter_id,
                     level="INFO",
-                    msg="✓ Reached end of data",
+                    msg="Reached end of data",
                     extra={
                         "symbol": symbol,
                         "total_pages": page_count,
@@ -342,6 +365,7 @@ class ResilientPriceAdapter(BaseAdapter):
                 )
                 break
             
+            # Calculate next offset
             current_offset += page_records
             
             log_event(
@@ -406,6 +430,7 @@ class ResilientPriceAdapter(BaseAdapter):
                     "symbol": symbol,
                     "start": start.isoformat() if start else None,
                     "end": end.isoformat() if end else None,
+                    "pagination_enabled": self.enable_pagination,
                 },
             )
 
@@ -414,21 +439,13 @@ class ResilientPriceAdapter(BaseAdapter):
             else:
                 url = self._build_api_url(symbol, start, end, self.default_limit, 0)
                 status_code, api_response = await self.retry_handler.fetch_with_retry(
-                    url=url, symbol=symbol, method="GET"
+                    url=url, symbol=symbol, method="GET", validate=True
                 )
                 
                 if status_code != 200 or not api_response:
                     return {
                         "success": False,
                         "error": f"API returned status {status_code}",
-                        "vendor": self.vendor,
-                        "adapter_id": self.adapter_id,
-                    }
-                
-                if not api_response.get("success", False):
-                    return {
-                        "success": False,
-                        "error": api_response.get("error", "Unknown error"),
                         "vendor": self.vendor,
                         "adapter_id": self.adapter_id,
                     }
@@ -455,12 +472,17 @@ class ResilientPriceAdapter(BaseAdapter):
             data_records = fetch_result["records"]
             pagination_stats = fetch_result["pagination_stats"]
 
+            # Empty results are success, not error
             if not data_records:
                 log_event(
                     stage="ingestion",
                     block=self.adapter_id,
-                    level="WARNING",
-                    msg=f"No data returned for {symbol}",
+                    level="INFO",
+                    msg=f"No price data found for {symbol} in specified time range",
+                    extra={
+                        "symbol": symbol,
+                        "time_range": f"{start.isoformat() if start else 'N/A'} to {end.isoformat() if end else 'N/A'}",
+                    },
                 )
                 return {
                     "success": True,
@@ -510,7 +532,7 @@ class ResilientPriceAdapter(BaseAdapter):
                 stage="ingestion",
                 block=self.adapter_id,
                 level="ERROR",
-                msg=f" {error_msg}",
+                msg=error_msg,
                 extra={"symbol": symbol, "error_type": type(e).__name__},
             )
             return {

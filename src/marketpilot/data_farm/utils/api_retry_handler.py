@@ -3,6 +3,7 @@ API Retry Handler Utility
 Shared retry logic and error handling for all adapters
 """
 
+
 from typing import Dict, Any, Optional, Tuple
 import aiohttp
 import asyncio
@@ -27,7 +28,7 @@ class APIRetryConfig:
 
 class APIRetryHandler:
     """
-    Handles API requests with retry logic and error handling
+    Handles API requests with retry logic, validation, and error handling
     Can be used by all adapters (price, news, fundamental, etc.)
     """
 
@@ -42,6 +43,80 @@ class APIRetryHandler:
         self.adapter_id = adapter_id
         self.config = config or APIRetryConfig()
 
+    def validate_response(self, response_data: Any, status_code: int) -> Tuple[bool, Optional[str]]:
+        """
+        Validate API response structure
+        
+        This method handles:
+        - Null responses
+        - Type validation (must be dict)
+        - Error detection (explicit error fields)
+        - Success flag validation
+        - Data field requirement
+        - Empty results (valid!)
+        
+        Returns:
+            Tuple[is_valid, error_message]
+            - is_valid: True if response is valid (including empty data)
+            - error_message: Error description if invalid, None otherwise
+        """
+        # Null response
+        if response_data is None:
+            return False, f"Null response with status {status_code}"
+        
+        # Must be a dictionary
+        if not isinstance(response_data, dict):
+            return False, f"Expected dict, got {type(response_data).__name__}"
+        
+        # Check for explicit error field at root level
+        if "error" in response_data:
+            error_detail = response_data.get("error")
+            if isinstance(error_detail, dict):
+                error_msg = error_detail.get("message", str(error_detail))
+            else:
+                error_msg = str(error_detail)
+            return False, f"API error: {error_msg}"
+        
+        # Check for nested error in 'detail' field
+        if "detail" in response_data:
+            detail = response_data["detail"]
+            if isinstance(detail, dict) and "error" in detail:
+                error_info = detail["error"]
+                if isinstance(error_info, dict):
+                    error_msg = error_info.get("message", str(error_info))
+                else:
+                    error_msg = str(error_info)
+                return False, f"API error: {error_msg}"
+        
+        # If success flag exists, respect it
+        if "success" in response_data:
+            if response_data["success"] is False:
+                # Get error message if available
+                error_msg = response_data.get("error", "API returned success=false")
+                return False, str(error_msg)
+            # success=true, continue validation
+        
+        # Must have 'data' field for valid response
+        if "data" not in response_data:
+            # Special case: if response has pagination/metadata but no data field
+            # This might indicate an API structure issue
+            if "pagination" in response_data or "metadata" in response_data:
+                log_event(
+                    stage="ingestion",
+                    block="api_retry",
+                    level="WARNING",
+                    msg="Response has pagination/metadata but no data field",
+                    extra={
+                        "adapter_id": self.adapter_id,
+                        "response_keys": list(response_data.keys()),
+                    },
+                )
+            return False, "Missing 'data' field in response"
+        
+        # Valid response
+        # Note: data can be empty list [] or empty dict {} - that's perfectly valid!
+        return True, None
+
     async def fetch_with_retry(
         self,
         url: str,
@@ -49,9 +124,10 @@ class APIRetryHandler:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         data: Optional[Dict[str, Any]] = None,
+        validate: bool = True,
     ) -> Tuple[int, Optional[Dict[str, Any]]]:
         """
-        Fetch data from API with retry logic and exponential backoff
+        Fetch data from API with retry logic, validation, and exponential backoff
 
         Args:
             url: API endpoint URL
@@ -59,11 +135,12 @@ class APIRetryHandler:
             method: HTTP method (GET, POST, etc.)
             headers: Optional HTTP headers
             data: Optional request body for POST requests
+            validate: Whether to validate response structure (default: True)
 
         Returns:
             tuple: (status_code, response_data)
                 - status_code: HTTP status code (0 if all retries failed)
-                - response_data: Parsed JSON response or None
+                - response_data: Parsed JSON response or None if invalid/failed
         """
         retry_count = 0
         last_error = None
@@ -77,13 +154,12 @@ class APIRetryHandler:
                         stage="ingestion",
                         block="api_retry",
                         level="INFO",
-                        msg=f"Retry attempt {retry_count}/{self.config.max_retries} after {delay:.1f}s delay",
+                        msg=f"Retry {retry_count}/{self.config.max_retries} after {delay:.1f}s",
                         extra={
                             "adapter_id": self.adapter_id,
                             "symbol": symbol,
                             "retry_count": retry_count,
                             "delay_seconds": delay,
-                            "url": url,
                         },
                     )
                     await asyncio.sleep(delay)
@@ -99,15 +175,36 @@ class APIRetryHandler:
                     ) as response:
                         status = response.status
 
-                        # Success case
+                        # Success case (200)
                         if status == 200:
                             try:
                                 response_data = await response.json()
+                                
+                                # Validate response structure if requested
+                                if validate:
+                                    is_valid, error_msg = self.validate_response(response_data, status)
+                                    if not is_valid:
+                                        log_event(
+                                            stage="ingestion",
+                                            block="api_retry",
+                                            level="ERROR",
+                                            msg=f"Invalid response structure: {error_msg}",
+                                            extra={
+                                                "adapter_id": self.adapter_id,
+                                                "symbol": symbol,
+                                                "error": error_msg,
+                                                "response_keys": list(response_data.keys()) if isinstance(response_data, dict) else None,
+                                            },
+                                        )
+                                        # Return 200 with None to indicate validation failure
+                                        # Adapter will treat this as an error
+                                        return (status, None)
+                                
                                 log_event(
                                     stage="ingestion",
                                     block="api_retry",
                                     level="DEBUG",
-                                    msg="Request successful (200)",
+                                    msg="Request successful",
                                     extra={
                                         "adapter_id": self.adapter_id,
                                         "symbol": symbol,
@@ -115,7 +212,8 @@ class APIRetryHandler:
                                     },
                                 )
                                 return (status, response_data)
-                            except Exception as json_error:
+                            
+                            except (aiohttp.ContentTypeError, ValueError) as json_error:
                                 log_event(
                                     stage="ingestion",
                                     block="api_retry",
@@ -124,11 +222,12 @@ class APIRetryHandler:
                                     extra={
                                         "adapter_id": self.adapter_id,
                                         "symbol": symbol,
+                                        "error_type": type(json_error).__name__,
                                     },
                                 )
                                 return (status, None)
 
-                        # Handle different error codes
+                        # Handle HTTP errors (non-200 status codes)
                         error_handling = await self._handle_http_error(
                             status, response, symbol
                         )
@@ -137,14 +236,14 @@ class APIRetryHandler:
                             last_error = error_handling["error_message"]
                             retry_count += 1
 
-                            # For rate limits, add extra delay
+                            # For rate limits, add extra delay before continuing
                             if status == 429 and retry_count <= self.config.max_retries:
-                                extra_delay = 5  # Extra 5 seconds for rate limits
+                                extra_delay = 5.0
                                 log_event(
                                     stage="ingestion",
                                     block="api_retry",
                                     level="WARNING",
-                                    msg=f"Rate limited - adding extra {extra_delay}s delay",
+                                    msg=f"Rate limited - adding {extra_delay}s extra delay",
                                     extra={
                                         "adapter_id": self.adapter_id,
                                         "symbol": symbol,
@@ -153,7 +252,7 @@ class APIRetryHandler:
                                 await asyncio.sleep(extra_delay)
                             continue
                         else:
-                            # Don't retry - return error immediately
+                            # Don't retry - return error status immediately
                             return (status, None)
 
             except aiohttp.ClientError as e:
@@ -204,6 +303,7 @@ class APIRetryHandler:
                         "error_type": type(e).__name__,
                     },
                 )
+                # For unexpected errors, don't retry
                 return (0, None)
 
         # All retries exhausted
@@ -211,12 +311,11 @@ class APIRetryHandler:
             stage="ingestion",
             block="api_retry",
             level="ERROR",
-            msg=f"All {self.config.max_retries} retry attempts exhausted",
+            msg=f"All {self.config.max_retries} retries exhausted",
             extra={
                 "adapter_id": self.adapter_id,
                 "symbol": symbol,
                 "last_error": last_error,
-                "url": url,
             },
         )
         return (0, None)
@@ -233,46 +332,19 @@ class APIRetryHandler:
             symbol: Symbol being fetched
 
         Returns:
-            Dict with 'should_retry' and 'error_message'
+            Dict with:
+                - 'should_retry': bool - whether to retry this request
+                - 'error_message': str - description of the error
         """
-        text = await response.text()
+        # Get response text for logging (limit to 200 chars)
+        try:
+            text = await response.text()
+            response_preview = text[:200] if text else ""
+        except Exception:
+            response_preview = "<unable to read response>"
 
-        # 503 Service Unavailable - Retry
-        if status == 503:
-            log_event(
-                stage="ingestion",
-                block="api_retry",
-                level="WARNING",
-                msg="Service unavailable (503) - will retry",
-                extra={
-                    "adapter_id": self.adapter_id,
-                    "symbol": symbol,
-                    "status": status,
-                    "response": text[:200],
-                },
-            )
-            return {
-                "should_retry": True,
-                "error_message": "Service unavailable (503)",
-            }
-
-        # 429 Rate Limited - Retry with extra delay
-        elif status == 429:
-            log_event(
-                stage="ingestion",
-                block="api_retry",
-                level="WARNING",
-                msg="Rate limited (429) - will retry",
-                extra={
-                    "adapter_id": self.adapter_id,
-                    "symbol": symbol,
-                    "status": status,
-                },
-            )
-            return {"should_retry": True, "error_message": "Rate limited (429)"}
-
-        # 500, 502, 504 Server Errors - Retry
-        elif status in [500, 502, 504]:
+        # 5xx Server Errors - Always retry
+        if status in [500, 502, 503, 504]:
             log_event(
                 stage="ingestion",
                 block="api_retry",
@@ -282,7 +354,7 @@ class APIRetryHandler:
                     "adapter_id": self.adapter_id,
                     "symbol": symbol,
                     "status": status,
-                    "response": text[:200],
+                    "response": response_preview,
                 },
             )
             return {
@@ -290,7 +362,25 @@ class APIRetryHandler:
                 "error_message": f"Server error ({status})",
             }
 
-        # 400, 401, 403, 404 Client Errors - Don't retry
+        # 429 Rate Limited - Retry with extra delay
+        elif status == 429:
+            log_event(
+                stage="ingestion",
+                block="api_retry",
+                level="WARNING",
+                msg="Rate limited (429) - will retry with extra delay",
+                extra={
+                    "adapter_id": self.adapter_id,
+                    "symbol": symbol,
+                    "status": status,
+                },
+            )
+            return {
+                "should_retry": True,
+                "error_message": "Rate limited (429)",
+            }
+
+        # 4xx Client Errors - Don't retry (except 429)
         elif status in [400, 401, 403, 404]:
             log_event(
                 stage="ingestion",
@@ -301,7 +391,7 @@ class APIRetryHandler:
                     "adapter_id": self.adapter_id,
                     "symbol": symbol,
                     "status": status,
-                    "response": text[:200],
+                    "response": response_preview,
                 },
             )
             return {
@@ -309,18 +399,18 @@ class APIRetryHandler:
                 "error_message": f"Client error ({status})",
             }
 
-        # Other errors - Retry cautiously
+        # Other unexpected status codes - Retry cautiously
         else:
             log_event(
                 stage="ingestion",
                 block="api_retry",
                 level="WARNING",
-                msg=f"Unexpected status ({status}) - will retry",
+                msg=f"Unexpected status code ({status}) - will retry",
                 extra={
                     "adapter_id": self.adapter_id,
                     "symbol": symbol,
                     "status": status,
-                    "response": text[:200],
+                    "response": response_preview,
                 },
             )
             return {
@@ -332,18 +422,24 @@ class APIRetryHandler:
         """
         Calculate delay for exponential backoff
 
+        Formula: delay = retry_delay * (backoff_factor ^ (retry_count - 1))
+        
+        Examples with default config (retry_delay=2.0, backoff_factor=2.0):
+        - retry 1: 2.0 * (2.0 ^ 0) = 2.0 seconds
+        - retry 2: 2.0 * (2.0 ^ 1) = 4.0 seconds
+        - retry 3: 2.0 * (2.0 ^ 2) = 8.0 seconds
+
         Args:
             retry_count: Current retry attempt number (1-indexed)
 
         Returns:
-            Delay in seconds
+            Delay in seconds (float)
         """
         return self.config.retry_delay * (
             self.config.backoff_factor ** (retry_count - 1)
         )
 
 
-# Convenience function for creating retry handler
 def create_retry_handler(
     adapter_id: str,
     max_retries: int = 3,
@@ -352,17 +448,21 @@ def create_retry_handler(
     timeout: int = 30,
 ) -> APIRetryHandler:
     """
-    Create a configured retry handler
+    Create a configured retry handler (convenience function)
 
     Args:
         adapter_id: Identifier for the adapter
-        max_retries: Maximum number of retry attempts
-        retry_delay: Initial delay between retries (seconds)
-        backoff_factor: Exponential backoff multiplier
-        timeout: Request timeout (seconds)
+        max_retries: Maximum number of retry attempts (default: 3)
+        retry_delay: Initial delay between retries in seconds (default: 2.0)
+        backoff_factor: Exponential backoff multiplier (default: 2.0)
+        timeout: Request timeout in seconds (default: 30)
 
     Returns:
         Configured APIRetryHandler instance
+
+    Example:
+        >>> handler = create_retry_handler("news_adapter_001", max_retries=5)
+        >>> status, data = await handler.fetch_with_retry(url, "BTCUSDT")
     """
     config = APIRetryConfig(
         max_retries=max_retries,
