@@ -96,11 +96,3 @@ def save_config(config: Dict[str, Any], path: str | Path):
         yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
     logger.info(f"Saved config to {path}")
 
-
-SCHEMA_DIR = Path("src/marketpilot/data_farm/schemas")
-
-
-def load_schema(schema_type: str) -> Dict[str, Any]:
-    """Load schema file (price_schema.yml, news_schema.yml, ...)"""
-    schema_file = SCHEMA_DIR / f"{schema_type}_schema.yml"
-    return load_config(schema_file)

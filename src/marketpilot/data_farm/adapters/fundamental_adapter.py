@@ -1,5 +1,5 @@
 """
-Resilient Fundamental Adapter (FIXED with time range support and proper transformation)
+Resilient Fundamental Adapter 
 """
 
 from typing import Dict, Any, Optional

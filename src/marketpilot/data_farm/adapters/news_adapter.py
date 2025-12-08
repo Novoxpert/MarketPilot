@@ -14,7 +14,7 @@ from marketpilot.data_farm.utils.api_retry_handler import create_retry_handler
 
 
 class ResilientNewsAdapter(BaseAdapter):
-    """News data adapter"""
+    """News data adapter with cursor-based pagination"""
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
@@ -34,7 +34,7 @@ class ResilientNewsAdapter(BaseAdapter):
         self.max_total_records = config.get("max_total_records", 1000)
         self.page_delay = config.get("page_delay", 0.5)
 
-        # Retry handler
+        # Retry handler with centralized validation
         self.retry_handler = create_retry_handler(
             adapter_id=self.adapter_id,
             max_retries=config.get("max_retries", 3),
@@ -66,7 +66,10 @@ class ResilientNewsAdapter(BaseAdapter):
         limit: int = 100,
         cursor: Optional[str] = None,
     ) -> str:
-        """Build API URL with cursor-based pagination"""
+        """
+        Build API URL with cursor-based pagination
+        Only includes cursor parameter if it's not None
+        """
         if start is None or end is None:
             end = datetime.utcnow()
             start = end - timedelta(days=1)
@@ -80,6 +83,7 @@ class ResilientNewsAdapter(BaseAdapter):
             "order": "desc",
         }
         
+        # Only add cursor if it exists
         if cursor:
             params["cursor"] = cursor
         
@@ -106,13 +110,11 @@ class ResilientNewsAdapter(BaseAdapter):
         ]
         """
         transformed_items = []
-        most_recent_time = None
 
         for article in articles:
             assets = article.get("assets", [])
             primary_symbol = assets[0].get("symbol") if assets else symbol
-
-            releasedAt = article.get("releasedAt") 
+            releasedAt = article.get("releasedAt")
 
             transformed_items.append({
                 "news_id": article.get("slug", ""),
@@ -129,17 +131,11 @@ class ResilientNewsAdapter(BaseAdapter):
                 "mapping_confidence": 1.0 if assets else 0.5,
             })
 
-        wrapper_timestamp = (
-            most_recent_time.isoformat() 
-            if most_recent_time 
-            else datetime.utcnow().isoformat()
-        )
-
         return {
             "symbol": symbol,
             "startdate": start.isoformat(),
             "enddate": end.isoformat(),
-            "timestamp": wrapper_timestamp,
+            "timestamp": datetime.utcnow().isoformat(),
             "data": transformed_items,
         }
 
@@ -201,12 +197,13 @@ class ResilientNewsAdapter(BaseAdapter):
                 pagination_stats["truncation_reason"] = f"max_records_limit_{self.max_total_records}"
                 break
 
-            # Build URL using cursor
+            # Build URL - cursor only included if not None
             url = self._build_api_url(
                 asset_slug, start, end, self.default_limit, current_cursor
             )
             print("--------news url")
             print(url)
+            
             log_event(
                 stage="ingestion",
                 block=self.adapter_id,
@@ -217,6 +214,7 @@ class ResilientNewsAdapter(BaseAdapter):
                     "page": page_count,
                     "cursor": current_cursor[:30] + "..." if current_cursor else None,
                     "total_so_far": total_fetched,
+                    "url": url,
                 },
             )
 
@@ -224,52 +222,61 @@ class ResilientNewsAdapter(BaseAdapter):
             if page_count > 1 and self.page_delay > 0:
                 await asyncio.sleep(self.page_delay)
 
-            # Fetch with retry handler
+            # Fetch with retry handler (automatic validation)
             status_code, api_response = await self.retry_handler.fetch_with_retry(
-                url=url, symbol=symbol, method="GET"
+                url=url, symbol=symbol, method="GET", validate=True
             )
 
-            # HTTP error
+            # Handle errors (validation already done by retry_handler)
             if status_code != 200 or api_response is None:
-                error_msg = (
-                    f"API returned status {status_code}"
-                    if status_code > 0
-                    else "Request failed after retries"
-                )
+                error_msg = f"API returned status {status_code}" if status_code > 0 else "Request failed"
                 log_event(
                     stage="ingestion",
                     block=self.adapter_id,
                     level="ERROR",
                     msg=f"Failed at page {page_count}: {error_msg}",
-                    extra={"status": status_code, "page": page_count, "symbol": symbol},
+                    extra={
+                        "status": status_code,
+                        "page": page_count,
+                        "symbol": symbol,
+                    },
                 )
                 
+                # On first page failure, return error immediately
                 if page_count == 1:
                     return {"error": error_msg, "status_code": status_code}
                 
+                # On later pages, stop pagination but keep what we have
                 pagination_stats["truncated"] = True
                 pagination_stats["truncation_reason"] = f"error_at_page_{page_count}"
                 break
 
-            # API success flag check
-            if not api_response.get("success", False):
-                log_event(
-                    stage="ingestion",
-                    block=self.adapter_id,
-                    level="ERROR",
-                    msg=f"API returned success=false at page {page_count}",
-                    extra={"page": page_count, "symbol": symbol},
-                )
-                if page_count == 1:
-                    return {"error": "API returned success=false"}
-                else:
-                    pagination_stats["truncated"] = True
-                    pagination_stats["truncation_reason"] = f"api_error_at_page_{page_count}"
-                    break
-
-            # Extract data
+            # Extract data (guaranteed to have 'data' field due to validation)
             page_data = api_response.get("data", [])
-            pagination = api_response.get("pagination", {})
+            
+            # Empty data is valid - it means no more results
+            if not page_data:
+                if page_count == 1:
+                    log_event(
+                        stage="ingestion",
+                        block=self.adapter_id,
+                        level="INFO",
+                        msg="No news articles found for this time range",
+                        extra={
+                            "symbol": symbol,
+                            "asset_slug": asset_slug,
+                            "time_range": f"{start.isoformat()} to {end.isoformat()}",
+                        },
+                    )
+                else:
+                    log_event(
+                        stage="ingestion",
+                        block=self.adapter_id,
+                        level="INFO",
+                        msg="Empty page received - end of data",
+                        extra={"page": page_count, "total_fetched": total_fetched},
+                    )
+                break
             
             all_articles.extend(page_data)
             total_fetched += len(page_data)
@@ -283,12 +290,12 @@ class ResilientNewsAdapter(BaseAdapter):
                     "symbol": symbol,
                     "page": page_count,
                     "articles_in_page": len(page_data),
-                    "returned_in_page": pagination.get("returned", len(page_data)),
                     "total_so_far": total_fetched,
-                    "has_next": pagination.get("has_next", False),
                 },
             )
 
+            # Check pagination
+            pagination = api_response.get("pagination", {})
             has_next = pagination.get("has_next", False)
             next_cursor = pagination.get("next_cursor")
             pagination_stats["last_cursor"] = next_cursor
@@ -382,23 +389,13 @@ class ResilientNewsAdapter(BaseAdapter):
                 print("-------news url")
                 print(url)
                 status_code, api_response = await self.retry_handler.fetch_with_retry(
-                    url=url, symbol=symbol, method="GET"
+                    url=url, symbol=symbol, method="GET", validate=True
                 )
                 
-                # Handle failure
                 if status_code != 200 or not api_response:
                     return {
                         "success": False,
                         "error": f"API returned status {status_code}",
-                        "vendor": self.vendor,
-                        "adapter_id": self.adapter_id,
-                    }
-                
-                # Check API success flag                
-                if not api_response.get("success", False):
-                    return {
-                        "success": False,
-                        "error": "API returned success=false",
                         "vendor": self.vendor,
                         "adapter_id": self.adapter_id,
                     }
@@ -427,13 +424,17 @@ class ResilientNewsAdapter(BaseAdapter):
             news_data = fetch_result["articles"]
             pagination_stats = fetch_result["pagination_stats"]
 
+            # Empty results are success, not error
             if not news_data:
                 log_event(
-                    stage=self.stage_name,
+                    stage="ingestion",
                     block=self.adapter_id,
-                    level="WARNING",
-                    msg=f"No news data for {symbol}",
-                    extra={"asset_slug": asset_slug},
+                    level="INFO",
+                    msg=f"No news data found for {symbol} in specified time range",
+                    extra={
+                        "asset_slug": asset_slug,
+                        "time_range": f"{start.isoformat()} to {end.isoformat()}",
+                    },
                 )
                 empty_result = {
                     "symbol": symbol,
