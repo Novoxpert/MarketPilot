@@ -87,5 +87,4 @@ class NaNProcessingStage(BaseStage):
         return {
             "open", "high", "low", "close", "volume",  # price
             "mapping_confidence", "asset_count",  # news
-            "value", "pe_ratio", "debt_to_equity",  # fundamental
         }
