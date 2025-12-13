@@ -78,7 +78,6 @@ class TemporalAlignmentStage(BaseStage):
             "candle_time",      # Price data
             "timestamp",        # Generic
             "releasedAt",       # News data
-            "date_utc",         # Fundamental data
             "date",             # Generic date
         ]
         

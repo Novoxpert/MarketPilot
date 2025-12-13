@@ -86,7 +86,6 @@ class DeduplicationStage(BaseStage):
             timestamp = (
                 record_data.get("candle_time")
                 or record_data.get("releasedAt")
-                or record_data.get("date_utc")
                 or "no_timestamp"
             )
         
@@ -99,9 +98,9 @@ class DeduplicationStage(BaseStage):
             news_id = record_data.get("news_id") or record_data.get("slug") or "no_id"
             return f"news:{symbol}:{news_id}"
         
-        elif schema_type == "fundamental":
-            metric = record_data.get("metric", "no_metric")
-            return f"fundamental:{symbol}:{metric}:{timestamp}"
+        # elif schema_type == "fundamental":
+        #     metric = record_data.get("metric", "no_metric")
+        #     return f"fundamental:{symbol}:{metric}:{timestamp}"
         
         else:
             adapter_id = record.get("adapter_id", "no_adapter")
