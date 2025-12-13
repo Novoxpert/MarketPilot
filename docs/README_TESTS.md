@@ -1,14 +1,14 @@
-# 📋 Comprehensive Test Guide - With Mode Manager
+# Comprehensive Test Guide - With Mode Manager
 
-## 🎯 Key Features
+## Key Features
 
-✅ **Test Mode Isolation**: Logs in `logs_test/` and data in `data_test/`  
-✅ **Mode Manager Integration**: Full integration with mode system  
-✅ **Comprehensive Coverage**: Complete coverage of adapters, stages, and integration  
+   **Test Mode Isolation**: Logs in `logs_test/` and data in `data_test/`  
+   **Mode Manager Integration**: Full integration with mode system  
+   **Comprehensive Coverage**: Complete coverage of adapters, stages, and integration  
 
 ---
 
-## 📁 Test Structure
+## Test Structure
 
 ```
 tests/
@@ -37,7 +37,7 @@ project/
 ---
 
 
-## ▶️ Running Tests
+## Running Tests
 
 ### Run All Tests
 ```bash
@@ -45,9 +45,9 @@ pytest
 ```
 
 **Result:**
-- ✅ Test mode activated
-- ✅ Logs saved to `logs_test/`
-- ✅ Data saved to `data_test/`
+-    Test mode activated
+-    Logs saved to `logs_test/`
+-    Data saved to `data_test/`
 
 ### Run Specific File
 ```bash
@@ -66,7 +66,7 @@ pytest --cov=marketpilot --cov-report=html
 
 ---
 
-## 🏷️ Using Markers
+## Using Markers
 
 ### Filter by Type
 ```bash
@@ -92,7 +92,7 @@ pytest -m smoke
 ---
 
 
-## 🔍 Inspecting Test Logs
+## Inspecting Test Logs
 
 ### During Test Execution
 
@@ -123,36 +123,36 @@ cat logs_test/errors/current.jsonl
 
 ---
 
-## ✅ Test Checklist
+##    Test Checklist
 
 ### Unit Tests (Fast)
-- ✅ `test_price_adapter_initialization`
-- ✅ `test_price_adapter_transform_response`
-- ✅ `test_news_adapter_initialization`
-- ✅ `test_news_adapter_transform_response`
-- ✅ `test_fundamental_adapter_initialization`
-- ✅ `test_nan_processing_basic`
-- ✅ `test_temporal_alignment_iso_string`
-- ✅ `test_deduplication_removes_duplicates`
-- ✅ `test_qa_pass`
+-    `test_price_adapter_initialization`
+-    `test_price_adapter_transform_response`
+-    `test_news_adapter_initialization`
+-    `test_news_adapter_transform_response`
+-    `test_fundamental_adapter_initialization`
+-    `test_nan_processing_basic`
+-    `test_temporal_alignment_iso_string`
+-    `test_deduplication_removes_duplicates`
+-    `test_qa_pass`
 
 ### Integration Tests (Slower)
-- ✅ `test_data_farm_initialization`
-- ✅ `test_smoke_test_basic`
-- ✅ `test_complete_pipeline_with_mock`
-- ✅ `test_pipeline_handles_adapter_failure`
-- ✅ `test_logs_created_in_test_directory`
+-    `test_data_farm_initialization`
+-    `test_smoke_test_basic`
+-    `test_complete_pipeline_with_mock`
+-    `test_pipeline_handles_adapter_failure`
+-    `test_logs_created_in_test_directory`
 
 ---
 
-## 🎯 Coverage Goals
+## Coverage Goals
 
 | Component | Target Coverage | Status |
 |-----------|----------------|--------|
-| Adapters | ≥ 80% | ✅ |
-| Stages | ≥ 85% | ✅ |
-| Utils | ≥ 75% | ✅ |
-| Overall | ≥ 80% | ✅ |
+| Adapters | ≥ 80% |    |
+| Stages | ≥ 85% |    |
+| Utils | ≥ 75% |    |
+| Overall | ≥ 80% |    |
 
 ```bash
 # Check coverage
@@ -160,7 +160,7 @@ pytest --cov=marketpilot --cov-report=term-missing
 ```
 
 
-## ✨ Best Practices
+## Best Practices
 
 ### 1. Always Use Test Mode
 ```python
@@ -200,7 +200,7 @@ def temp_data():
 
 ---
 
-## 🎉 Quick Commands Summary
+## Quick Commands Summary
 
 ```bash
 # Quick run
@@ -220,7 +220,7 @@ pytest -m integration
 ---
 
 
-## 📞 Support
+## Support
 
 For issues or questions:
 1. Check logs_test/errors/current.jsonl
@@ -229,6 +229,7 @@ For issues or questions:
 4. Check Mode Manager status
 
 ---
+marketpilot
 
 poetry run marketpilot
 
