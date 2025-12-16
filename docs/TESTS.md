@@ -31,7 +31,7 @@ project/
 │   ├── BINANCE_BTCUSDT_P/
 │   └── __meta__/
 └── logs/                    # Normal logs (untouched)
-    └── data/                # Normal data (untouched)
+    └── /                # Normal data (untouched)
 ```
 
 ---
@@ -145,20 +145,6 @@ cat logs_test/errors/current.jsonl
 
 ---
 
-## Coverage Goals
-
-| Component | Target Coverage | Status |
-|-----------|----------------|--------|
-| Adapters | ≥ 80% |    |
-| Stages | ≥ 85% |    |
-| Utils | ≥ 75% |    |
-| Overall | ≥ 80% |    |
-
-```bash
-# Check coverage
-pytest --cov=marketpilot --cov-report=term-missing
-```
-
 
 ## Best Practices
 
@@ -185,17 +171,6 @@ def test_isolation():
 def mock_adapter(mock_env_vars):
     with patch.dict('os.environ', mock_env_vars):
         yield create_adapter()
-```
-
-### 4. Cleanup in Teardown
-```python
-@pytest.fixture
-def temp_data():
-    # Setup
-    data = create_temp_data()
-    yield data
-    # Teardown
-    cleanup_temp_data(data)
 ```
 
 ---
@@ -228,11 +203,3 @@ For issues or questions:
 3. Check conftest.py
 4. Check Mode Manager status
 
----
-marketpilot
-
-poetry run marketpilot
-
-poetry run python -m marketpilot.cli.main
-
-λ run-pipeline

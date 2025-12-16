@@ -45,25 +45,58 @@ Health Check → Data Collection → NaN Cleaning
 | **ResilientNewsAdapter** | Articles | Cursor-based | `{news_id, symbol, title, assets}` |
 | **ResilientFundamentalAdapter** | Financials | *(Coming soon)* | - |
 
+
+### Pipeline Stages
+
+| Stage | Purpose | Key Operations |
+|-------|---------|----------------|
+| **Health Check** | Verify API availability | HTTP GET `/health` endpoints |
+| **Data Collection** | Fetch from adapters | Parallel ingestion with retry |
+| **NaN Processing** | Clean missing values | Replace NaN/empty with defaults |
+| **Temporal Alignment** | Normalize timestamps | Convert to Unix ms (int) |
+| **Deduplication** | Remove duplicates | Symbol + timestamp keys |
+| **Quality Assurance** | Validate data | Check pass rate threshold |
+| **Data Export** | Save to Parquet | Asset-first structure |
+---
+
+## Output Structure
+
+```
+data/
+├── BINANCE_BTCUSDT_P/
+│   ├── price.parquet         # OHLCV data
+│   ├── news.parquet          # News articles
+│   └── symbol_info.json      # Metadata
+├── BINANCE_ETHUSDT_P/
+│   └── ...
+└── __meta__/
+    ├── manifest.jsonl        # Export manifest
+    └── pipeline_stats.json   # Pipeline metrics
+
+logs/
+├── pipeline/current.jsonl
+├── stages/
+│   ├── health_check.jsonl
+│   ├── data_collection.jsonl
+│   └── ...
+├── adapter/
+│   ├── price_internal_001.jsonl
+│   └── news_internal_001.jsonl
+└── errors/current.jsonl
+```
+
 ---
 
 ## Quick Start
 
 ### 1. Installation
-
-```bash
-pip install -r requirements.txt
-```
+ please read SETUP.md file
 
 ### 2. Configuration
 
 **Environment variables** (`.env`):
 ```bash
-PRICE_API_BASE_URL=https://api.example.com/price
-PRICE_API_HEALTH_URL=https://api.example.com/price/health
-
-NEWS_API_BASE_URL=https://api.example.com/news
-NEWS_API_HEALTH_URL=https://api.example.com/news/health
+cp .env.example .env
 ```
 
 **Config file** (`configs/data/data_farm_config.yml`):
@@ -116,34 +149,6 @@ print(f"   Exported {result['export_stats']['records_exported']} records")
 
 ---
 
-## Output Structure
-
-```
-data/
-├── BINANCE_BTCUSDT_P/
-│   ├── price.parquet         # OHLCV data
-│   ├── news.parquet          # News articles
-│   └── symbol_info.json      # Metadata
-├── BINANCE_ETHUSDT_P/
-│   └── ...
-└── __meta__/
-    ├── manifest.jsonl        # Export manifest
-    └── pipeline_stats.json   # Pipeline metrics
-
-logs/
-├── pipeline/current.jsonl
-├── stages/
-│   ├── health_check.jsonl
-│   ├── data_collection.jsonl
-│   └── ...
-├── adapter/
-│   ├── price_internal_001.jsonl
-│   └── news_internal_001.jsonl
-└── errors/current.jsonl
-```
-
----
-
 ## 🔧 Configuration Reference
 
 ### Adapter Fields
@@ -162,30 +167,9 @@ logs/
 | `backoff_factor` | float | 2.0 | Exponential backoff multiplier |
 | `timeout` | int | 30 | Request timeout (seconds) |
 
-### Common Configurations
-
-**Development (Low limits)**:
-```yaml
-adapters:
-  - id: price_dev
-    type: price
-    max_pages: 10
-    max_total_records: 10000
-```
-
-**Production (High volume)**:
-```yaml
-adapters:
-  - id: price_prod
-    type: price
-    max_pages: 10000
-    max_total_records: 10000000
-    page_delay: 0.5
-```
-
 ---
 
-## 📖 Usage Examples
+## Usage Examples
 
 ### 1. Basic Usage
 
@@ -246,22 +230,6 @@ with open("logs/adapter/price_internal_001.jsonl") as f:
             print(f"Error: {log['message']}")
 ```
 
----
-
-## Technical Details
-
-### Pipeline Stages
-
-| Stage | Purpose | Key Operations |
-|-------|---------|----------------|
-| **Health Check** | Verify API availability | HTTP GET `/health` endpoints |
-| **Data Collection** | Fetch from adapters | Parallel ingestion with retry |
-| **NaN Processing** | Clean missing values | Replace NaN/empty with defaults |
-| **Temporal Alignment** | Normalize timestamps | Convert to Unix ms (int) |
-| **Deduplication** | Remove duplicates | Symbol + timestamp keys |
-| **Quality Assurance** | Validate data | Check pass rate threshold |
-| **Data Export** | Save to Parquet | Asset-first structure |
-
 ### Adapters Implementation
 
 **Price Adapter (Offset Pagination)**:
@@ -295,10 +263,6 @@ retry_handler = create_retry_handler(
 
 status, data = await retry_handler.fetch_with_retry(url, symbol)
 ```
-
-**Exponential Backoff**: `delay = retry_delay * (backoff_factor ^ (attempt - 1))`
-
-Example: `2.0s → 4.0s → 8.0s`
 
 **Concurrency Control**: Per-symbol locks prevent duplicate fetches
 
@@ -351,18 +315,6 @@ Example: `2.0s → 4.0s → 8.0s`
 }
 ```
 
----
-
-## Troubleshooting
-
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Pipeline hangs | API not responding | Check health URLs in `.env` |
-| No data exported | Invalid time range | Verify `start < end` |
-| Rate limit (429) | Too many requests | Increase `page_delay` in config |
-| Empty results | Symbol not found | Check symbol format |
-| Quality check fails | Bad data | Review `logs/errors/current.jsonl` |
-| Import errors | Missing dependencies | `pip install -r requirements.txt` |
 
 **Check API Health**:
 ```bash
@@ -375,116 +327,5 @@ curl $PRICE_API_HEALTH_URL
 cat logs/errors/current.jsonl | jq
 ```
 
----
-
-## Performance
-
-| Metric | Value |
-|--------|-------|
-| Price ingestion | ~100K records/min |
-| News ingestion | ~1K articles/min |
-| Deduplication overhead | <2% |
-| Export speed | ~500MB/min (Parquet) |
-
----
-
 ## Testing
-
-### Test Structure
-
-```
-tests/
-├── conftest.py              # Fixtures & test configuration
-├── test_adapters.py         # Unit tests for adapters
-├── test_stages.py           # Unit tests for stages
-└── test_integration.py      # Integration & E2E tests
-```
-
-### Test Mode
-
-All tests run in **isolated test mode**:
-- Logs → `logs_test/`
-- Data → `data_test/`
-- No real API calls (mocked)
-
-```python
-# Automatic test mode activation via conftest.py
-from marketpilot.utils.mode_manager import set_test_mode
-set_test_mode()
-```
-
-### Run Tests
-
-```bash
-# All tests
-pytest
-
-# By category
-pytest -m unit           # Unit tests only
-pytest -m integration    # Integration tests only
-pytest -m adapter        # Adapter tests only
-pytest -m stage          # Stage tests only
-
-# Specific file
-pytest tests/test_adapters.py
-pytest tests/test_stages.py
-pytest tests/test_integration.py
-
-# With coverage
-pytest --cov=marketpilot.data_farm tests/
-
-# Verbose output
-pytest -v -s
-```
-
-### Test Categories
-
-| Marker | Description | Example |
-|--------|-------------|---------|
-| `@pytest.mark.unit` | Fast unit tests | Adapter transformation logic |
-| `@pytest.mark.integration` | E2E tests | Full pipeline execution |
-| `@pytest.mark.adapter` | Adapter tests | Price/News adapters |
-| `@pytest.mark.stage` | Stage tests | NaN/Dedup/QA stages |
-| `@pytest.mark.asyncio` | Async tests | Pipeline execution |
-
-### Mock Data
-
-Tests use fixtures for consistent mock data:
-
-```python
-# conftest.py provides:
-mock_price_data          # Sample OHLCV data
-mock_news_data           # Sample news articles
-mock_price_api_response  # Complete API response
-mock_adapter_success     # Successful adapter result
-sample_symbols           # ["BINANCE:BTCUSDT.P", ...]
-```
-
-### Example Test
-
-```python
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_deduplication_removes_duplicates():
-    stage = DeduplicationStage()
-    
-    test_data = {
-        "aligned_data": [
-            {"symbol": "BTC", "timestamp": 12345, ...},
-            {"symbol": "BTC", "timestamp": 12345, ...}  # Duplicate
-        ]
-    }
-    
-    result = await stage._process(test_data)
-    
-    assert len(result["unique_data"]) == 1
-    assert result["dedup_stats"]["duplicates_removed"] == 1
-```
-
-### Coverage Report
-
-```bash
-pytest --cov=marketpilot.data_farm --cov-report=html tests/
-open htmlcov/index.html
-```
-
+please read TEST.md
