@@ -34,6 +34,7 @@ class DeduplicationStage(BaseStage):
                         "symbol": record.get("symbol"),
                         "schema_type": record.get("schema_type"),
                         "key": unique_key,
+                        "record":record.data|None,
                     })
             else:
                 seen_keys.add(unique_key)
