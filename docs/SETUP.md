@@ -95,7 +95,7 @@ poetry run pre-commit install
 
 **Import errors:**
 ```bash
-poetry shell  # Activate environment first
+poetry env activate  # Activate environment first
 ```
 
 **API keys not loading:**
@@ -120,31 +120,27 @@ poetry run pytest && poetry run black --check . && poetry run flake8 .
 
 ### PowerShell
 ```powershell
-Get-Content logs\adapters\adapters_*.jsonl
-Get-Content logs\stages\stages_*.jsonl
-Get-Content logs\errors\errors_*.jsonl
-Get-Content logs\pipeline\pipeline_*.jsonl
+Get-Content logs\adapters\*.jsonl
+Get-Content logs\stages\*.jsonl
+Get-Content logs\errors\current.jsonl
+Get-Content logs\pipeline\current.jsonl
 ```
 
 ### Linux/macOS
 ```bash
-cat logs/adapters/adapters_*.jsonl
-cat logs/stages/stages_*.jsonl
-cat logs/errors/errors_*.jsonl
-cat logs/pipeline/pipeline_*.jsonl
+cat logs/adapters/*.jsonl
+cat logs/stages/*.jsonl
+cat logs/errors/current.jsonl
+cat logs/pipeline/current.jsonl
 ```
 
 ## Pretty Print (Optional)
 
 With `jq`:
 ```bash
-cat logs/adapters/adapters_*.jsonl | jq .
+cat logs/adapters/*.jsonl | jq .
 ```
 
-With Python:
-```bash
-poetry run python -c "import json; [print(json.dumps(json.loads(line), indent=2)) for line in open('logs/adapters/adapters_20250103.jsonl')]"
-```
 
 ## Expected Output
 
@@ -159,10 +155,12 @@ Each log line should be valid JSON with these fields:
 - [ ] Files named category: `category.jsonl`
 - [ ] Each line is valid JSON
 - [ ] Logs to correct directories
-## Need Help?
 
-- Check troubleshooting section above
-- Search existing issues
-- Create new issue with: OS, Python version, error message, steps to reproduce
+---
+marketpilot
 
-Happy coding! 🚀
+poetry run marketpilot
+
+poetry run python -m marketpilot.cli.main
+
+λ run-pipeline
